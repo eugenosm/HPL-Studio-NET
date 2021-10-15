@@ -1,0 +1,19 @@
+; Orange programmer module 
+
+; Adapter description
+INFO=""
+;
+;Pin Description
+;ALLPINS=
+;PINI=
+;PINO=
+;BUSI=
+;BUSO=
+
+[INIT]
+
+[READ]
+
+[WRITE]
+
+[END]

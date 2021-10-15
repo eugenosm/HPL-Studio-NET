@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<doc>
+    <style name="StringStyle" color="Green" fontStyle="Italic" />
+    <style name="CommentStyle" color="Gray" fontStyle="Italic" />
+    <style name="NumberStyle" color="Red" fontStyle="Regular" />
+    <style name="FunctionNameStyle" color="steelblue" fontStyle="Bold" />
+  <style name="KeywordStyle2" color="Cadetblue" fontStyle="Regular" />
+  <style name="KeywordStyle" color="Blue" fontStyle="Regular" />
+    <style name="Directives" color="Sienna" fontStyle="Regular" />
+    <style name="CommentTagStyle" color="Gray" fontStyle="Regular" />
+    <rule style="StringStyle">""|@""|''|@".*?"|(?&lt;!@)(?&lt;range&gt;".*?[^\\]")|'.*?[^\\]'</rule>
+    <rule style="CommentStyle" options="Multiline">;.*$</rule>
+    <rule style="NumberStyle">\b\d+[\.]?\d*([eE]\-?\d+)?[lLdDfF]?\b|\b0x[a-fA-F\d]+\b</rule>
+    <rule style="FunctionNameStyle" options="Multiline">^\s*(?&lt;range&gt;\[.+?\])\s*$</rule>
+  <rule style="KeywordStyle2">\$AREA\b|\$BLOCKSIZE\b|\$CDELAY\b|\$CHNS\b|\$FREQ\b|\$MAXSIZE\b|\$SIZE\b|\$VERIFY\b|\$VERSION\b|\$WDELAY\b|\$MODE\b|\$MCUCLK|\b(R0|R1|R10|R11|R12|R13|R14|R15|R16|R17|R18|R19|R1A|R1B|R1C|R1D|R1E|R1F|R2|R3|R4|R5|R6|R7|R8|R9|RA|RB|RC|RD|RE|RF|VCC|VPP)\b</rule>
+  <rule style="KeywordStyle">\b(ADR|ALLPINS|ALTNAME|BCOLOR|BGCOLOR|BREAK|BUSI|BUSO|CDELAY|CFREQ|CONST|DATA|EXIT|GAP|GET|HPL|IDISABLE|IENABLE|IMAGE|INFO|INFOFILE|LOOP|MARK|MATRIX|OPTIONS|PIN|PING|PINI|PINO|PLACE|POWER|PRINT|REG|RETURN|SHAPE|SIZE|SOCKET|SPACE|TCOLOR|TD|TL|TR|TU)\b</rule>
+    <rule style="Directives">(\#def|\#struct|\#ends|\#macro|\#endm|\$OPERATION(\.READ|\.VERIFY|\.WRITE|\.USER)?|\$VALUE(\.Ok|\.Cancel)?|#type\.(bin|check_box|dec|hex_editor|hex|list|string|push_button)?)\b</rule>
+	<rule style="KeywordStyle">\b(?&lt;range&gt;P)[\s]?\=</rule>
+	<rule style="KeywordStyle">\bPRINT[\s]?=[\s]?(?&lt;range&gt;E|S|T|L|P|A)</rule>
+	<rule style="KeywordStyle">\bR[0-9A-Fa-f]{1,2}[\s]?\=[\s]?[\w\s]+\,(?&lt;range&gt;B|C|D|E|H|L|S|P)</rule>
+
+</doc>
+
+
+
+
+
+
