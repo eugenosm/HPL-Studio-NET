@@ -113,7 +113,7 @@
             // 
             this.newFileMenuItem.Name = "newFileMenuItem";
             this.newFileMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.N)));
-            this.newFileMenuItem.Size = new System.Drawing.Size(172, 22);
+            this.newFileMenuItem.Size = new System.Drawing.Size(173, 22);
             this.newFileMenuItem.Text = "Создать";
             this.newFileMenuItem.Click += new System.EventHandler(this.newFileMenuItem_Click);
             // 
@@ -121,7 +121,7 @@
             // 
             this.openFileMenuItem.Name = "openFileMenuItem";
             this.openFileMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.O)));
-            this.openFileMenuItem.Size = new System.Drawing.Size(172, 22);
+            this.openFileMenuItem.Size = new System.Drawing.Size(173, 22);
             this.openFileMenuItem.Text = "Открыть";
             this.openFileMenuItem.Click += new System.EventHandler(this.openFileMenuItem_Click);
             // 
@@ -129,39 +129,39 @@
             // 
             this.saveMenuItem.Name = "saveMenuItem";
             this.saveMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.S)));
-            this.saveMenuItem.Size = new System.Drawing.Size(172, 22);
+            this.saveMenuItem.Size = new System.Drawing.Size(173, 22);
             this.saveMenuItem.Text = "Сохранить";
             this.saveMenuItem.Click += new System.EventHandler(this.saveMenuItem_Click);
             // 
             // saveAsMenuItem
             // 
             this.saveAsMenuItem.Name = "saveAsMenuItem";
-            this.saveAsMenuItem.Size = new System.Drawing.Size(172, 22);
+            this.saveAsMenuItem.Size = new System.Drawing.Size(173, 22);
             this.saveAsMenuItem.Text = "Сохранить как";
             this.saveAsMenuItem.Click += new System.EventHandler(this.saveAsMenuItem_Click);
             // 
             // toolStripSeparator4
             // 
             this.toolStripSeparator4.Name = "toolStripSeparator4";
-            this.toolStripSeparator4.Size = new System.Drawing.Size(169, 6);
+            this.toolStripSeparator4.Size = new System.Drawing.Size(170, 6);
             // 
             // printMenuItem
             // 
             this.printMenuItem.Name = "printMenuItem";
             this.printMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.P)));
-            this.printMenuItem.Size = new System.Drawing.Size(172, 22);
+            this.printMenuItem.Size = new System.Drawing.Size(173, 22);
             this.printMenuItem.Text = "Печать";
             this.printMenuItem.Click += new System.EventHandler(this.printMenuItem_Click);
             // 
             // toolStripSeparator5
             // 
             this.toolStripSeparator5.Name = "toolStripSeparator5";
-            this.toolStripSeparator5.Size = new System.Drawing.Size(169, 6);
+            this.toolStripSeparator5.Size = new System.Drawing.Size(170, 6);
             // 
             // recentFilesMenuItem
             // 
             this.recentFilesMenuItem.Name = "recentFilesMenuItem";
-            this.recentFilesMenuItem.Size = new System.Drawing.Size(172, 22);
+            this.recentFilesMenuItem.Size = new System.Drawing.Size(173, 22);
             this.recentFilesMenuItem.Text = "Недавние файлы";
             this.recentFilesMenuItem.DropDownItemClicked += new System.Windows.Forms.ToolStripItemClickedEventHandler(this.recentFilesMenuItem_DropDownItemClicked);
             // 
@@ -177,14 +177,14 @@
             // PreprocessorMenuItem
             // 
             this.PreprocessorMenuItem.Name = "PreprocessorMenuItem";
-            this.PreprocessorMenuItem.Size = new System.Drawing.Size(146, 22);
+            this.PreprocessorMenuItem.Size = new System.Drawing.Size(180, 22);
             this.PreprocessorMenuItem.Text = "Собрать";
             this.PreprocessorMenuItem.Click += new System.EventHandler(this.PreprocessorMenuItem_Click);
             // 
             // ToPassToMenuItem
             // 
             this.ToPassToMenuItem.Name = "ToPassToMenuItem";
-            this.ToPassToMenuItem.Size = new System.Drawing.Size(146, 22);
+            this.ToPassToMenuItem.Size = new System.Drawing.Size(180, 22);
             this.ToPassToMenuItem.Text = "Передать в ,,,";
             this.ToPassToMenuItem.Click += new System.EventHandler(this.ToPassToMenuItem_Click);
             // 

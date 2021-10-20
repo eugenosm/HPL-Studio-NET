@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
@@ -31,9 +33,19 @@ namespace HPLStudio
 //        public string xmlString = "";
 
 //        const string sectionRegex = @"^\[\w+\].*$";
-        const string SectionRegex = @"^\[(\w+|[\#\!\~]+\w+|\x22[\w\s]+\x22|[\#\!\~]+\x22[\w\s]+\x22)\].*$";
 
         public IniFile iniFile;
+
+
+        private const int SW_MAXIMIZE = 3;
+        private const int SW_SHOW = 5;
+        private const int SW_MINIMIZE = 6;
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+        [DllImport("user32.dll")]
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
 
         private readonly RecentFileHandler _recentFileHandler;
         public Form1()
@@ -51,7 +63,7 @@ namespace HPLStudio
             e.ChangedRange.SetFoldingMarkers("#struct", "#ends");
             e.ChangedRange.SetFoldingMarkers("#macro", "#endm");
             //
-            foreach (var r in e.ChangedRange.GetRangesByLines(SectionRegex, RegexOptions.None))
+            foreach (var r in e.ChangedRange.GetRangesByLines(Preprocessor.SectionRegex, RegexOptions.None))
             {
                 if (r.Start.iLine > 0) r.tb[r.Start.iLine - 1].FoldingEndMarker = "section";
                 r.tb[r.Start.iLine].FoldingStartMarker = "section";
@@ -156,8 +168,8 @@ namespace HPLStudio
             else
             {
                 System.IO.File.WriteAllText(FileName, TextEditor.Text);
-                isFileNew = false;
             }
+            isFileNew = false;
         }
 
         private void saveAsMenuItem_Click(object sender, EventArgs e)
@@ -257,6 +269,9 @@ namespace HPLStudio
 
         }
 
+        private System.Diagnostics.Process progerWindow = null;
+        private string _progerWindowSoftware = "";
+
         private void ToPassToMenuItem_Click(object sender, EventArgs e)
         {
             PreprocessorMenuItem_Click(sender, e);
@@ -266,11 +281,21 @@ namespace HPLStudio
             {
                 var resultFileName = pathString + "/" + hplSubDir + "/" + justFileName + defaultHplExtension;
                 TextEditor.SaveToFile(resultFileName, Encoding.ASCII);
-            }            
+            }
+
 //            saveAsMenuItem_Click(sender, e);
             var passTo = pathString + '/' + exeString;
-            System.Diagnostics.Process.Start(passTo); //? 
+            if (progerWindow != null && !progerWindow.HasExited && progerWindow.ProcessName != ""  && passTo == _progerWindowSoftware )
+            {
+                SetForegroundWindow(progerWindow.Handle);//  ShowWindow(progerWindow.Handle, SW_SHOW);
+            }
+            else
+            {
+                progerWindow = Process.Start(passTo); //? 
+                _progerWindowSoftware = passTo;
+            }
         }
+    
 
         private void printMenuItem_Click(object sender, EventArgs e)
         {
@@ -294,21 +319,21 @@ namespace HPLStudio
                 var justFileName = System.IO.Path.GetFileNameWithoutExtension(FileName);
                 var resultFileName = workDir + "/" + justFileName + defaultHplExtension;
                 System.IO.File.WriteAllLines(resultFileName, dest);  //? 
-                var found = -1;
+                FATabStripItem found = null;
                 foreach (FATabStripItem item in tsFiles.Items)
                 {
                     if (item.Tag is string s && s == resultFileName)
                     {
-                        found = item.TabIndex;
+                        found = item;
                         break;
                     }
                 }
-                if (found < 0)
+                if (found is null)
                     CreateTab(resultFileName);
                 else
-                    ((FastColoredTextBox)tsFiles.Items[found].Controls[0]).Text = System.IO.File.ReadAllText(resultFileName);
+                    ((FastColoredTextBox)found.Controls[0]).Text = System.IO.File.ReadAllText(resultFileName);
 //                textEditor. = fname + ".hpl"; //?
-                isFileNew = true;
+                // isFileNew = true;
                 MessageBox.Show(Resources.STR_CompletedSuccessfully);
             }
             else
@@ -391,14 +416,14 @@ namespace HPLStudio
 
 // AVTO PODSTANOVKA??        AutocompleteMenu popupMenu;
 
-        private void BuildAutocompleteMenu(AutocompleteMenu popupMenu)
+        private static void BuildAutocompleteMenu(AutocompleteMenu popupMenu)
         {
             var items = Preprocessor.keywords.Select(item => new AutocompleteItem(item)).ToList();
             items.AddRange(Preprocessor.registers.Select(item => new AutocompleteItem(item)));
             items.AddRange(Preprocessor.addons.Select(item => new AutocompleteItem(item)));
 
             //set as autocomplete source
-            popupMenu.SearchPattern = @"[\w\.]|[\$\w\.]|[\#\w\.]";
+            popupMenu.SearchPattern = @"[\w\.]|[\$\w\.]|[\#\w\.]|[@\w\.]";
             popupMenu.Items.SetAutocompleteItems(items);
         }
 
@@ -445,54 +470,82 @@ namespace HPLStudio
 
         }
 
+        private static void AddSectionsToAutoComplete(string text, List<AutocompleteItem> items)
+        {
+            var regex = new Regex(@"^\[((?<range>\w+)?|[\#\!\~]+(?<range>\w+)?)\]", RegexOptions.Multiline);
+            foreach (Match r in regex.Matches(text))
+            {
+                try
+                {
+                    var s = r.Value;
+                    if (s[0] == '[' && s[s.Length - 1] == ']')
+                    {
+                        var temp = s.Split(new char[] { '[', ']', '#', '!', '~' }, StringSplitOptions.RemoveEmptyEntries);
+                        s = temp[0];
+                    }
+                    if (!items.Exists(x => x.Text == s))
+                    {
+                        items.Add(new AutocompleteItem(s));
+                    }
+                }
+                catch
+                {
+
+                }
+            }
+        }
+
+        private static void AddPinsToAutoComplete(string text, List<AutocompleteItem> items)
+        {
+            var pinsRe = new Regex(@"((BUS.?|PIN.?|R\d+)\s?=\s?(\w+),(\w+)(,(\w))?)", RegexOptions.Multiline);
+            foreach (Match pinRec in pinsRe.Matches(text))
+            {
+                try
+                {
+                    var s = pinRec.Groups[3].Value;
+                    if (!items.Exists(x => x.Text == s))
+                    {
+                        items.Add(new AutocompleteItem(s));
+                    }
+                }
+                catch
+                {
+
+                }
+            }
+        }
+
+        private static void AddArraysToAutoComplete(string text, List<AutocompleteItem> items)
+        {
+            var pinsRe = new Regex(@"^(@\w+)\s*=\s*((0x[0-9A-Za-z]+|[0-9A-Za-z]+H|\d+)|(\{(\w+)(,\s*\w+)*\}))", RegexOptions.Multiline);
+            foreach (Match pinRec in pinsRe.Matches(text))
+            {
+                try
+                {
+                    var s = pinRec.Groups[1].Value;
+                    if (!items.Exists(x => x.Text == s))
+                    {
+                        items.Add(new AutocompleteItem(s));
+                    }
+                }
+                catch
+                {
+
+                }
+            }
+        }
+
         private static void ReBuildAutoCompleteList(string text, FastColoredTextBox tb)
         {
             try
             {
                 var items = Preprocessor.keywords.Select(item => new AutocompleteItem(item)).ToList();
                 items.AddRange(Preprocessor.registers.Select(item => new AutocompleteItem(item)));
-
                 items.AddRange(Preprocessor.addons.Select(item => new AutocompleteItem(item)));
 
-                var regex = new Regex(@"^\[((?<range>\w+)?|[\#\!\~]+(?<range>\w+)?)\]", RegexOptions.Multiline);
-                foreach (Match r in regex.Matches(text))
-                {
-                    try
-                    {
-                        var s = r.Value;
-                        if (s[0] == '[' && s[s.Length-1] == ']')
-                        {
-                            var temp = s.Split(new char[] {'[',']','#','!','~' }, StringSplitOptions.RemoveEmptyEntries);
-                           s = temp[0];
-                        }
-                        if (!items.Exists(x => x.Text == s))
-                        {
-                            items.Add(new AutocompleteItem(s));
-                        }
-                    }
-                    catch
-                    {
-
-                    }
-                }
-
-                var pinsRe = new Regex(@"((BUS.?|PIN.?|R\d+)\s?=\s?(\w+),(\w+)(,(\w))?)", RegexOptions.Multiline);
-                foreach (Match pinRec in pinsRe.Matches(text))
-                {
-                    try
-                    {
-                        var s = pinRec.Groups[3].Value;
-                        if (!items.Exists(x => x.Text == s))
-                        {
-                            items.Add(new AutocompleteItem(s));
-                        }
-                    }
-                    catch
-                    {
-
-                    }
-                }
-
+                AddSectionsToAutoComplete(text, items);
+                AddPinsToAutoComplete(text, items);
+                AddArraysToAutoComplete(text, items);
 
                 tb.Invoke( new Action<TbInfo>( tbi => tbi.popupMenu.Items.SetAutocompleteItems(items)), (tb.Tag as TbInfo));
                 //set as autocomplete source                

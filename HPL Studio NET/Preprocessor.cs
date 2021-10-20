@@ -2,12 +2,14 @@
 using System.Collections.Generic;
 using System.Drawing.Design;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 
 namespace HPLStudio
 {
     internal class Preprocessor
     {
+        public const string SectionRegex = "^\\[[#!~]*\x22?(\\w+)\x22?\\].*$"; // @"^\s*\[(\w+|[\#\!\~]+\w+|\x22[\w\s]+\x22|[\#\!\~]+\x22[\w\s]+\x22)\].*$";
         public class ErrorRec
         {
             public enum ErrCodes{ EcOk = 0, EcErrorInDefineExpression, EcErrorInIncludeExpressionOrFileNotFound,
@@ -288,17 +290,36 @@ namespace HPLStudio
             RearrangeDefs(ref vars, "#type.push_button", "P");
         }
 
-       public static ErrorRec Compile(ref List<string> source, out string[] dest, ref KeyValList.KeyValList vars) 
+        public static bool FuncDefCheck(string line, ref KeyValList.KeyValList vars)
+        {
+            var m = Regex.Match(line, SectionRegex);
+            if (m.Success)
+            {
+                var identifier = m.Groups[1].Value;
+                if (vars.IndexOfKey(identifier) < 0)
+                {
+                    RearrangeDefs(ref vars, identifier, identifier);
+                }
+                return true;
+            }
+            return false;
+        }
+
+        public static ErrorRec Compile(ref List<string> source, out string[] dest, ref KeyValList.KeyValList vars) 
         {
             if (vars.Count == 0) InitPredefinedVars(ref vars);
             var destBuf = new List<string>();
             for (var i = 0; i < source.Count; i++)
             {
                 var line = source[i];
+                if (FuncDefCheck(line, ref vars))
+                {
+                    destBuf.Add(line);
+                    continue;
+                }
                 var trimLine = line.Trim();
                 var commentPos = trimLine.IndexOf(';');
                 if (commentPos >= 0) trimLine = trimLine.Substring(0, commentPos);
-
                 int equPos;
                 dest = null;
                 if (trimLine.Length > 0 && trimLine[0] == '#')
@@ -403,13 +424,10 @@ namespace HPLStudio
                             needToTranslate = false;
                             for (var ii = 0; ii < vars.Count; ii++)
                             {
-                                if (vars[ii] != vars[vars[ii]])
+                                if (noComment[0].IndexOf(vars[ii], StringComparison.Ordinal) >= 0)
                                 {
-                                    if (noComment[0].IndexOf(vars[ii], StringComparison.Ordinal) >= 0)
-                                    {
-                                        needToTranslate = true;
-                                        noComment[0] = noComment[0].Replace(vars[ii], vars[vars[ii]]);
-                                    }
+                                    needToTranslate = vars[ii] != vars[vars[ii]];
+                                    noComment[0] = noComment[0].Replace(vars[ii], vars[vars[ii]]);
                                 }
                             }
                         }
