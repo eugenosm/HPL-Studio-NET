@@ -5,17 +5,19 @@ namespace KeyValList
 {
     public class KeyValList
     {
-        private List< KeyValuePair<string,string > > vars;
         public KeyValList()
         {
-            vars = new List<KeyValuePair<string, string>>();
+            List = new List<KeyValuePair<string, string>>();
         }
+
+        public List<KeyValuePair<string, string>> List { get; }
+
         /// <summary>
         /// возвращает ключ хранящийся в позиции index
         /// </summary>
         /// <param name="index"></param>
         /// <returns></returns>
-        public string this[int index] => vars[index].Key;
+        public string this[int index] => List[index].Key;
 
         /// <summary>
         /// организует доступ к паре ключ, значение по имени ключа
@@ -24,20 +26,20 @@ namespace KeyValList
         /// <returns></returns>
         public string this[string key]
         {
-            get => (from pair in vars where pair.Key == key select pair.Value).FirstOrDefault();
+            get => (from pair in List where pair.Key == key select pair.Value).FirstOrDefault();
 
             set
             {
-                for (var i = 0; i < vars.Count; i++)
+                for (var i = 0; i < List.Count; i++)
                 {
-                    if (vars[i].Key == key)
+                    if (List[i].Key == key)
                     {
-                        if( vars[i].Value != value )
-                            vars[i] = new KeyValuePair<string,string>( key, value );
+                        if( List[i].Value != value )
+                            List[i] = new KeyValuePair<string,string>( key, value );
                         return;
                     }
                 }
-                vars.Add(new KeyValuePair<string, string>(key, value));
+                List.Add(new KeyValuePair<string, string>(key, value));
             }
         }
         /// <summary>
@@ -47,8 +49,8 @@ namespace KeyValList
         /// <returns></returns>
         public int IndexOfKey(string key)
         {
-            for (var i = 0; i < vars.Count; i++)
-                if (vars[i].Key == key)
+            for (var i = 0; i < List.Count; i++)
+                if (List[i].Key == key)
                     return i;
             return -1;
         }
@@ -58,7 +60,7 @@ namespace KeyValList
         /// <param name="idx"></param>
         public void Remove(int idx)
         {
-            vars.RemoveAt(idx);
+            List.RemoveAt(idx);
         }
 
         /// <summary>
@@ -69,7 +71,7 @@ namespace KeyValList
         /// <param name="value"></param>
         public void Insert(int idx, string key, string value)
         {
-            vars.Insert(idx, new KeyValuePair<string, string>(key, value));     
+            List.Insert(idx, new KeyValuePair<string, string>(key, value));     
         }
 
         /// <summary>
@@ -79,11 +81,11 @@ namespace KeyValList
         /// <param name="value"></param>
         public void Add(string key, string value)
         {
-            vars.Add(new KeyValuePair<string, string>(key, value));
+            List.Add(new KeyValuePair<string, string>(key, value));
         }
         /// <summary>
         /// возвращает количество сохраненных значение
         /// </summary>
-        public int Count => vars.Count;
+        public int Count => List.Count;
     }
 }

@@ -280,7 +280,12 @@ namespace HPLStudio
             if (workDir != null && workDir.IndexOf(pathString, StringComparison.Ordinal) < 0)
             {
                 var resultFileName = pathString + "/" + hplSubDir + "/" + justFileName + defaultHplExtension;
-                TextEditor.SaveToFile(resultFileName, Encoding.ASCII);
+                
+                var fileTab = FindFileTab($"{workDir}/{justFileName}{defaultHplExtension}")?.Controls[0];
+                if (fileTab is FastColoredTextBox fctb)
+                {
+                    fctb.SaveToFile(resultFileName, Encoding.ASCII);
+                }
             }
 
 //            saveAsMenuItem_Click(sender, e);
@@ -308,6 +313,18 @@ namespace HPLStudio
             TextEditor.Print(pds);            
         }
 
+        private FATabStripItem FindFileTab(string filename)
+        {
+            foreach (FATabStripItem item in tsFiles.Items)
+            {
+                if (item.Tag is string s && s.Replace("/", "\\") == filename.Replace("/", "\\"))
+                {
+                    return item;
+                }
+            }
+            return null;
+        }
+
         private void PreprocessorMenuItem_Click(object sender, EventArgs e)
         {
             var vars = new KeyValList.KeyValList();
@@ -319,19 +336,12 @@ namespace HPLStudio
                 var justFileName = System.IO.Path.GetFileNameWithoutExtension(FileName);
                 var resultFileName = workDir + "/" + justFileName + defaultHplExtension;
                 System.IO.File.WriteAllLines(resultFileName, dest);  //? 
-                FATabStripItem found = null;
-                foreach (FATabStripItem item in tsFiles.Items)
-                {
-                    if (item.Tag is string s && s == resultFileName)
-                    {
-                        found = item;
-                        break;
-                    }
-                }
-                if (found is null)
+                var fileTab = FindFileTab(resultFileName);
+                
+                if (fileTab is null)
                     CreateTab(resultFileName);
                 else
-                    ((FastColoredTextBox)found.Controls[0]).Text = System.IO.File.ReadAllText(resultFileName);
+                    ((FastColoredTextBox)fileTab.Controls[0]).Text = System.IO.File.ReadAllText(resultFileName);
 //                textEditor. = fname + ".hpl"; //?
                 // isFileNew = true;
                 MessageBox.Show(Resources.STR_CompletedSuccessfully);
@@ -535,6 +545,59 @@ namespace HPLStudio
             }
         }
 
+        private static void AddDefsToAutoComplete(string text, List<AutocompleteItem> items)
+        {
+            var defsRe = new Regex(@"^#def\s*(\w*)\s*=\s*(.*)\s*$", RegexOptions.Multiline);
+            foreach (Match def in defsRe.Matches(text))
+            {
+                try
+                {
+                    var s = def.Groups[1].Value;
+                    if (!items.Exists(x => x.Text == s))
+                    {
+                        items.Add(new AutocompleteItem(s));
+                    }
+                }
+                catch
+                {
+
+                }
+            }
+        }
+
+        private static void AddStructsToAutoComplete(string text, List<AutocompleteItem> items)
+        {
+            var defsRe = new Regex(@"(#struct\s*(\w*)\s*=\s*(@?\w*))((\s*(\w+)\s*=?\d*\s)+)(#ends)", RegexOptions.Singleline);
+            foreach (Match def in defsRe.Matches(text))
+            {
+                try
+                {
+                    var s = def?.Groups[2].Value;
+                    if (!items.Exists(x => x.Text == s))
+                    {
+                        items.Add(new AutocompleteItem(s));
+                    }
+
+                    var fields = def?.Groups[4].Value.Trim()
+                        .Split(new char[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+                    foreach (var f in fields)
+                    {
+                        var fn = f.Split(new[] { '=' }, StringSplitOptions.RemoveEmptyEntries);
+                        var sf = $"{s}.{fn[0].Trim()}";
+                        if (!items.Exists(x => x.Text == sf))
+                        {
+                            items.Add(new AutocompleteItem(sf));
+                        }
+                    }
+                }
+                catch
+                {
+
+                }
+            }
+        }
+
+
         private static void ReBuildAutoCompleteList(string text, FastColoredTextBox tb)
         {
             try
@@ -546,6 +609,8 @@ namespace HPLStudio
                 AddSectionsToAutoComplete(text, items);
                 AddPinsToAutoComplete(text, items);
                 AddArraysToAutoComplete(text, items);
+                AddDefsToAutoComplete(text, items);
+                AddStructsToAutoComplete(text, items);
 
                 tb.Invoke( new Action<TbInfo>( tbi => tbi.popupMenu.Items.SetAutocompleteItems(items)), (tb.Tag as TbInfo));
                 //set as autocomplete source                

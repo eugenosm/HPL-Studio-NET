@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing.Design;
 using System.Linq;
 using System.Text.RegularExpressions;
 
@@ -290,160 +289,181 @@ namespace HPLStudio
             RearrangeDefs(ref vars, "#type.push_button", "P");
         }
 
-        public static bool FuncDefCheck(string line, ref KeyValList.KeyValList vars)
+        public static bool FuncDefCheck(string line, ref KeyValList.KeyValList vars, out string identifier)
         {
             var m = Regex.Match(line, SectionRegex);
             if (m.Success)
             {
-                var identifier = m.Groups[1].Value;
+                identifier = m.Groups[1].Value;
                 if (vars.IndexOfKey(identifier) < 0)
                 {
                     RearrangeDefs(ref vars, identifier, identifier);
                 }
                 return true;
             }
+            identifier = null;
             return false;
         }
 
-        public static ErrorRec Compile(ref List<string> source, out string[] dest, ref KeyValList.KeyValList vars) 
+
+        private static string CleanLine(string line)
         {
-            if (vars.Count == 0) InitPredefinedVars(ref vars);
-            var destBuf = new List<string>();
+            var trimLine = line.Trim();
+            var commentPos = trimLine.IndexOf(';');
+            if (commentPos >= 0) trimLine = trimLine.Substring(0, commentPos);
+            return trimLine;
+        }
+
+        private static (int, ErrorRec) ProcessDefs(ref List<string> source, List<string> dest, ref KeyValList.KeyValList vars)
+        {
             for (var i = 0; i < source.Count; i++)
             {
                 var line = source[i];
-                if (FuncDefCheck(line, ref vars))
+                if (Regex.Match(line, SectionRegex).Success)
                 {
-                    destBuf.Add(line);
-                    continue;
+                    return (i, new ErrorRec());
                 }
-                var trimLine = line.Trim();
-                var commentPos = trimLine.IndexOf(';');
-                if (commentPos >= 0) trimLine = trimLine.Substring(0, commentPos);
-                int equPos;
-                dest = null;
+
+                var trimLine = CleanLine(line);
                 if (trimLine.Length > 0 && trimLine[0] == '#')
                 {
                     if (trimLine.IndexOf("#def", StringComparison.Ordinal) == 0)
                     {
-                        var r = DoDef(ref source, ref destBuf, ref vars, ref i, ref trimLine);
+                        var r = DoDef(ref source, ref dest, ref vars, ref i, ref trimLine);
                         if (r.errorCode != ErrorRec.ErrCodes.EcOk)
                         {
-                            return r;
+                            return (i, r);
                         }
-                    }                
+                    }
                     else if (trimLine.IndexOf("#struct", StringComparison.Ordinal) == 0)
                     {
-                        var r = DoStruct(ref source, ref destBuf, ref vars, ref i, ref trimLine, ref line);
+                        var r = DoStruct(ref source, ref dest, ref vars, ref i, ref trimLine, ref line);
                         if (r.errorCode != ErrorRec.ErrCodes.EcOk)
                         {
-                            return r;
+                            return (i, r);
                         }
                     }
                     else if (trimLine.IndexOf("#macro", StringComparison.Ordinal) == 0)
                     {
-                        var r = DoMacro(ref source, ref destBuf, ref vars, ref i, ref trimLine);
+                        var r = DoMacro(ref source, ref dest, ref vars, ref i, ref trimLine);
                         if (r.errorCode != ErrorRec.ErrCodes.EcOk)
                         {
-                            return r;
+                            return (i, r);
                         }
 
                     }
-                    else if(trimLine.IndexOf("#include", StringComparison.Ordinal) == 0)
+                    else if (trimLine.IndexOf("#include", StringComparison.Ordinal) == 0)
                     {
-                        var r = DoInclude(ref destBuf, ref vars, ref i, ref trimLine);
+                        var r = DoInclude(ref dest, ref vars, ref i, ref trimLine);
                         if (r.errorCode != ErrorRec.ErrCodes.EcOk)
                         {
-                            return r;
+                            return (i, r);
                         }
 
                     }
                     else
                     {
-                        return new ErrorRec(ErrorRec.ErrCodes.EcErrorIncorrectDirective, i, "");
+                        return (i, new ErrorRec(ErrorRec.ErrCodes.EcErrorIncorrectDirective, i, ""));
                     }
                 }
                 else
                 {
-                    string identifier;
-                    string value;
-                    if (trimLine.IndexOf("PIN", StringComparison.Ordinal) == 0)
-                    {
-                        // PINO = CLK,12,8
-                        var pinEndPos = 3;
-                        if (trimLine.IndexOf("PINI", StringComparison.Ordinal) == 0 || trimLine.IndexOf("PINO", StringComparison.Ordinal) == 0 || trimLine.IndexOf("PING", StringComparison.Ordinal) == 0)
-                        {
-                            pinEndPos = 4;
-                        }
+                    var r = ProcessSocketAndVars(ref dest, ref vars, line, trimLine, i);
+                    if (r.errorCode != ErrorRec.ErrCodes.EcOk) return (i, r);
+                }
+            }
 
-                        identifier = trimLine.Substring(pinEndPos).Trim();
-                        if (identifier.IndexOf('=') == 0)
-                        {
-                            equPos = identifier.IndexOf(',');
-                            if (equPos > 1)
-                            {
-                                value = identifier.Substring(1, equPos - 1).Trim();
-                                RearrangeDefs(ref vars, value, value);
-                                destBuf.Add(line);
-                                continue;
-                            }
-                            return new ErrorRec(ErrorRec.ErrCodes.EcErrorInInitSectionExpression, i, "");
-                        }
-                        return new ErrorRec( ErrorRec.ErrCodes.EcErrorInInitSectionExpression, i,"" );
-                    }
-                    if (trimLine.IndexOf("BUS", StringComparison.Ordinal) == 0)
-                    {
-                        int pinEndPos = 3;
-                        if (trimLine.IndexOf("BUSI", StringComparison.Ordinal) == 0 || trimLine.IndexOf("BUSO", StringComparison.Ordinal) == 0)
-                        {
-                            pinEndPos = 4;
-                        }
+            return (source.Count, new ErrorRec());
+        }
 
-                        identifier = trimLine.Substring(pinEndPos).Trim();
-                        if (identifier.IndexOf('=') == 0)
-                        {
-                            equPos = identifier.IndexOf(',');
-                            if (equPos > 1)
-                            {
-                                value = identifier.Substring(1, equPos - 1).Trim();
-                                RearrangeDefs(ref vars, value, value);
-                                destBuf.Add(line);
-                                continue;
-                            }
-                            return new ErrorRec(ErrorRec.ErrCodes.EcErrorInInitSectionExpression, i, "");
-                        }
-                        return new ErrorRec(ErrorRec.ErrCodes.EcErrorInInitSectionExpression, i, "");
-                    }
-
-                    var needToTranslate = true;
-                    if (line.Length > 0 && line[0] != ';')
-                    {
-                        var noComment = line.Split(';');
-                        while (needToTranslate)
-                        {
-                            needToTranslate = false;
-                            for (var ii = 0; ii < vars.Count; ii++)
-                            {
-                                if (noComment[0].IndexOf(vars[ii], StringComparison.Ordinal) >= 0)
-                                {
-                                    needToTranslate = vars[ii] != vars[vars[ii]];
-                                    noComment[0] = noComment[0].Replace(vars[ii], vars[vars[ii]]);
-                                }
-                            }
-                        }
-                        line = "";
-//                        if (noComment.Length > 1)
-                        {
-                            foreach (string part in noComment)
-                                if (line != "")
-                                    line = line + ";" + part;
-                                else
-                                    line = part;
-                        }
-                    }
-                    destBuf.Add(line);
+        private static ErrorRec ProcessSocketAndVars(ref List<string> dest, ref KeyValList.KeyValList vars, string line, string trimLine, int idx)
+        {
+            dest.Add(line);
+            if (trimLine.IndexOf("PIN", StringComparison.Ordinal) == 0 || trimLine.IndexOf("BUS", StringComparison.Ordinal) == 0)
+            {
+                // PINO = CLK,12,8
+                var pinEndPos =  3;
+                var c = trimLine.Length > 3 ? trimLine[3] : '*';
+                if( c is 'I' or 'O' or 'G')
+                {
+                    pinEndPos = 4;
                 }
 
+                var identifier = trimLine.Substring(pinEndPos).Trim();
+                if (identifier.IndexOf('=') == 0)
+                {
+                    var equPos = identifier.IndexOf(',');
+                    if (equPos > 1)
+                    {
+                        var value = identifier.Substring(1, equPos - 1).Trim();
+                        RearrangeDefs(ref vars, value, value);
+                        return new ErrorRec();
+                    }
+                    return new ErrorRec(ErrorRec.ErrCodes.EcErrorInInitSectionExpression, idx, "");
+                }
+                return new ErrorRec(ErrorRec.ErrCodes.EcErrorInInitSectionExpression, idx, "");
+            }
+
+            return new ErrorRec();
+        }
+
+        public static ErrorRec Compile(ref List<string> source, out string[] dest, ref KeyValList.KeyValList vars)
+        {
+            if (vars.Count == 0) InitPredefinedVars(ref vars);
+            var destBuf = new List<string>();
+            var (codeStart, r) = ProcessDefs(ref source, destBuf, ref vars);
+
+            var reservedNames = new List<string>();
+            for (var i = codeStart; i < source.Count; i++)
+            {
+                var line = source[i];
+                if (FuncDefCheck(line, ref vars, out var identifier))
+                {
+                    reservedNames.Add(identifier);
+                }
+
+            }
+
+            for (var i = codeStart; i < source.Count; i++)
+            {
+                var line = source[i];
+                var trimLine = CleanLine(line);
+                if (string.IsNullOrEmpty(trimLine))
+                {
+                    destBuf.Add(line);
+                    continue;
+                }
+                var origTrimLine = trimLine;
+
+                foreach (var kv in vars.List)
+                {
+                    if (kv.Key == kv.Value)
+                    {
+                        reservedNames.Add(kv.Key);
+                    }
+                    else
+                    {
+                        var reserved = reservedNames.FindAll(x => x.Contains(kv.Key));
+                        if (reserved?.Count > 0)
+                        {
+
+                            for (var ri = 0; ri < reserved.Count; ri++)
+                            {
+                                trimLine = trimLine.Replace(reserved[ri], $"<##{ri}##>");
+                                trimLine = trimLine.Replace(kv.Key, kv.Value);
+                            }
+                            trimLine = trimLine.Replace(kv.Key, kv.Value);
+                            for (var ri = reserved.Count - 1; ri >= 0; ri--)
+                            {
+                                trimLine = trimLine.Replace($"<##{ri}##>", reserved[ri]);
+                            }
+                        }
+                        else
+                            trimLine = trimLine.Replace(kv.Key, kv.Value);
+                    }
+                }
+                line = line.Replace(origTrimLine, trimLine);
+                destBuf.AddRange(line.Split(new string[] { Environment.NewLine }, StringSplitOptions.None));
             }
 
             dest = destBuf.ToArray();
@@ -454,7 +474,7 @@ namespace HPLStudio
                                              ,"CONST", "CDELAY", "DATA", "EXIT", "GAP", "GET", "IENABLE", "IDISABLE"
                                              , "INFO", "INFOFILE", "IMAGE", "LOOP", "MARK", "MATRIX", "OPTIONS", "PING", "PINI", "PINO"
                                              , "PIN", "PLACE", "POWER", "PRINT", "SHAPE", "SIZE", "SPACE", "TCOLOR"
-                                             , "TR", "TL", "TD", "TU", "D", "C", "L", "R", "A", "S", "E", "N", "O"
+                                             , "TR", "TL", "TD", "TU", "D", "C", "L", "R", "A", "S", "E", "N", "O", "P"
                                              , "REG", "RETURN", "SOCKET", "VCC", "VPP"};
 
         public static string[] registers = {"$SIZE", "$MAXSIZE", "$FREQ", "$CHNS", "$AREA", "$BLOCKSIZE", "$CDELAY", "$WDELAY"
