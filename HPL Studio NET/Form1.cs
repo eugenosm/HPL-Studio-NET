@@ -43,7 +43,7 @@ namespace HPLStudio
 
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
-        static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
         [DllImport("user32.dll")]
         private static extern bool SetForegroundWindow(IntPtr hWnd);
 
@@ -55,7 +55,7 @@ namespace HPLStudio
             this._recentFileHandler.RecentFileToolStripItem = this.recentFilesMenuItem;
         }
 
-        private void textEditor_TextChanged(object sender, TextChangedEventArgs e)
+        private static void textEditor_TextChanged(object sender, TextChangedEventArgs e)
         {
             //clear folding markers
             e.ChangedRange.ClearFoldingMarkers();
@@ -112,10 +112,18 @@ namespace HPLStudio
         {
             try
             {
+
                 var tb = new FastColoredTextBox();
                 tb.Font = new Font("Consolas", 9.75f);
-                tb.ForeColor = paletteWindowsTextColor;
-                tb.BackColor =  paletteWindowColor;
+                tb.ForeColor = _paletteWindowsTextColor;
+                var ext = System.IO.Path.GetExtension(fileName);
+                tb.BackColor = ext switch
+                {
+                    ".hpm" => _paletteHpmWindowColor,
+                    ".hpl" => _paletteHplWindowColor,
+                    _ => _paletteWindowColor
+                };
+                // tb.BackColor =  _paletteWindowColor;
 //                tb.ContextMenuStrip = cmMain;
                 tb.Dock = DockStyle.Fill;
                 tb.BorderStyle = BorderStyle.Fixed3D;
@@ -236,8 +244,13 @@ namespace HPLStudio
             if (sender is ToolStripMenuItem mi) SelectToolMenu(mi.Text);
         }
 
-        private Color paletteWindowsTextColor;
-        private Color paletteWindowColor;
+        private Color _paletteWindowsTextColor;
+        private Color _paletteWindowColor;
+        private Color _paletteHplWindowColor;
+        private Color _paletteHpmWindowColor;
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        public static extern int GetSysColor(int nIndex);
 
         private void Form1_Load(object sender, EventArgs e)
         {
@@ -264,12 +277,14 @@ namespace HPLStudio
             var def = iniFile.GetString("selected", "prog", "");
             SelectToolMenu( def );
 
-            paletteWindowsTextColor = SystemColors.WindowText;
-            paletteWindowColor = SystemColors.Window;
+            _paletteWindowsTextColor = SystemColors.WindowText;//  Color.FromArgb(GetSysColor((int)KnownColor.WindowText));
+            _paletteWindowColor = SystemColors.Window; //Color.FromArgb(GetSysColor((int)KnownColor.Window));
+            _paletteHplWindowColor = Color.FromArgb(215, 228, 242);
+            _paletteHpmWindowColor = Color.FromArgb(255, 255, 210);
 
         }
 
-        private System.Diagnostics.Process progerWindow = null;
+        private System.Diagnostics.Process _progerWindow = null;
         private string _progerWindowSoftware = "";
 
         private void ToPassToMenuItem_Click(object sender, EventArgs e)
@@ -290,13 +305,13 @@ namespace HPLStudio
 
 //            saveAsMenuItem_Click(sender, e);
             var passTo = pathString + '/' + exeString;
-            if (progerWindow != null && !progerWindow.HasExited && progerWindow.ProcessName != ""  && passTo == _progerWindowSoftware )
+            if (_progerWindow != null && !_progerWindow.HasExited && _progerWindow.ProcessName != ""  && passTo == _progerWindowSoftware )
             {
-                SetForegroundWindow(progerWindow.Handle);//  ShowWindow(progerWindow.Handle, SW_SHOW);
+                SetForegroundWindow(_progerWindow.Handle);//  ShowWindow(progerWindow.Handle, SW_SHOW);
             }
             else
             {
-                progerWindow = Process.Start(passTo); //? 
+                _progerWindow = Process.Start(passTo); //? 
                 _progerWindowSoftware = passTo;
             }
         }
@@ -330,7 +345,7 @@ namespace HPLStudio
             var vars = new KeyValList.KeyValList();
             var source = TextEditor.Lines.ToList();
             var result =  Preprocessor.Compile(ref source, out var dest, ref vars);
-            if (result == null || result.errorCode == Preprocessor.ErrorRec.ErrCodes.EcOk)
+            if (result == null || result.errorCode == ErrorRec.ErrCodes.EcOk)
             {
                 var workDir = System.IO.Path.GetDirectoryName(FileName);
                 var justFileName = System.IO.Path.GetFileNameWithoutExtension(FileName);

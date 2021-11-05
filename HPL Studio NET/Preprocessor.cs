@@ -1,76 +1,85 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
+using System.Windows.Forms;
 
 
 namespace HPLStudio
 {
+
+    public class ErrorRec
+    {
+        public enum ErrCodes
+        {
+            EcOk = 0, EcErrorInDefineExpression, EcErrorInIncludeExpressionOrFileNotFound,
+            EcErrorIncorrectDirective, EcErrorIdentifierAlreadyDefined, EcErrorInInitSectionExpression,
+            EcErrorSubDefinePreviouslyDefined, EcErrorInParameters, EcErrorInSectionName
+        };
+        public ErrCodes errorCode;
+        public int errorLine;
+        public string fileName;
+        public ErrorRec()
+        {
+            errorCode = ErrCodes.EcOk;
+            errorLine = 0;
+            fileName = "";
+        }
+        public ErrorRec(ErrCodes code, int line, string file)
+        {
+            errorCode = code;
+            errorLine = line;
+            fileName = file;
+        }
+        public static string ErrorTextByCode(ErrCodes code)
+        {
+            return code switch
+            {
+                ErrCodes.EcOk => "OK",
+                ErrCodes.EcErrorInDefineExpression => "Error In Define Expression",
+                ErrCodes.EcErrorInIncludeExpressionOrFileNotFound =>
+                    "Error In Include Expression Or File Not Found",
+                ErrCodes.EcErrorIncorrectDirective => "Error Incorrect Directive",
+                ErrCodes.EcErrorIdentifierAlreadyDefined => "Error Identifier Already Defined",
+                ErrCodes.EcErrorInInitSectionExpression => "Error in Init Section Expression",
+                ErrCodes.EcErrorSubDefinePreviouslyDefined => "Error Subdefine Previously Defined",
+                ErrCodes.EcErrorInParameters => "Error Parameters Out Of Range or of Incorrect Type",
+                ErrCodes.EcErrorInSectionName => "Incorrect Section Name. F.ex. generated setter or is too long.",
+                _ => "Unknown Error"
+            };
+        }
+
+        public override string ToString() { return ErrorTextByCode(errorCode) + ", in file <" + fileName + ">, at line: " + errorLine.ToString(); }
+    };
+
     internal class Preprocessor
     {
         public const string SectionRegex = "^\\[[#!~]*\x22?(\\w+)\x22?\\].*$"; // @"^\s*\[(\w+|[\#\!\~]+\w+|\x22[\w\s]+\x22|[\#\!\~]+\x22[\w\s]+\x22)\].*$";
-        public class ErrorRec
-        {
-            public enum ErrCodes{ EcOk = 0, EcErrorInDefineExpression, EcErrorInIncludeExpressionOrFileNotFound,
-                EcErrorIncorrectDirective, EcErrorIdentifierAlreadyDefined, EcErrorInInitSectionExpression,
-                EcErrorSubDefinePreviouslyDefined, EcErrorInParameters
-            };
-            public ErrCodes errorCode;
-            public int errorLine;
-            public string fileName;
-            public ErrorRec()
-            {
-                errorCode = ErrCodes.EcOk;
-                errorLine = 0;
-                fileName = "";
-            }
-            public ErrorRec(ErrCodes code, int line, string file)
-            {
-                errorCode = code;
-                errorLine = line;
-                fileName = file;
-            }   
-            public static string ErrorTextByCode( ErrCodes code )
-            {
-                switch( code )
-                {
-                  case ErrCodes.EcOk:
-                    return "OK";
-                  case ErrCodes.EcErrorInDefineExpression:
-                    return "Error In Define Expression";
-                  case ErrCodes.EcErrorInIncludeExpressionOrFileNotFound:
-                    return "Error In Include Expression Or File Not Found";
-                  case ErrCodes.EcErrorIncorrectDirective:
-                    return "Error Incorrect Directive";
-                  case ErrCodes.EcErrorIdentifierAlreadyDefined:
-                    return "Error Identifier Already Defined";
-                  case ErrCodes.EcErrorInInitSectionExpression:
-                    return "Error in Init Section Expression";
-                  case ErrCodes.EcErrorSubDefinePreviouslyDefined:
-                    return "Error Subdefine Previously Defined";
-                  case ErrCodes.EcErrorInParameters:
-                    return "Error Parameters Out Of Range or of Incorrect Type";
-                  default:
-                    return "Unknown Error";
-                }
-            }
 
-            public override string ToString() { return ErrorTextByCode(errorCode) + ", in file <" + fileName + ">, at line: "  + errorLine.ToString();}
-        };
-
-        private static void AddPreCompiledLines ( ref List<string> funcLines, ref string[] preCompiledLines, ref List<string> dest, ref KeyValList.KeyValList vars   )
+        internal static void AddPreCompiledLines ( ref List<string> funcLines, ref string[] preCompiledLines, ref List<string> dest, ref KeyValList.KeyValList vars   )
         {
             dest.AddRange(preCompiledLines);
-            foreach (var t in funcLines)
+            var funcs = ExtractFuncDefs(funcLines, 0, ref vars);
+            foreach (var f in funcs)
             {
-                var lines = t.Trim();
-                var pp = lines.IndexOf(']');
-                if (lines.IndexOf('[') == 0 && pp  > 0)
+                if (vars.IndexOfKey(f) < 0)
                 {
-                    lines = lines.Substring(1,pp-1).Trim();
-                    RearrangeDefs(ref vars, lines, lines);
+                    vars.Add(f, f);
                 }
             }
+            /*
+
+        foreach (var line in funcLines.Select(x => x.Trim()))
+        {
+            var pp = line.IndexOf(']');
+            if (line.IndexOf('[') == 0 && pp  > 0)
+            {
+                lines = lines.Substring(1,pp-1).Trim();
+                PushDef(ref vars, lines, lines);
+            }
+        }
+            */
         }
 
 
@@ -86,7 +95,7 @@ namespace HPLStudio
             var value = parsedLine[1].Trim();
             if (CheckIdentifierIsFree(ref vars, identifier))
             {
-                RearrangeDefs(ref vars, identifier, value);
+                PushDef(ref vars, identifier, value);
                 dest.Add(";" + source[i]);
             }
             else
@@ -114,131 +123,10 @@ namespace HPLStudio
             return new ErrorRec();
         }
 
-        private static ErrorRec DoStruct(ref List<string> source, ref List<string> dest, ref KeyValList.KeyValList vars
-                                    , ref int i, ref string trimLine, ref string line)
-        {
 
-            var parsedLine = trimLine.Substring(7).Split('=' );
-            if (parsedLine.Length < 2)
-            {
-                return new ErrorRec(ErrorRec.ErrCodes.EcErrorInDefineExpression, i, "");
-            }
-
-            var identifierHead = parsedLine[0].Trim();
-            var bitCount = 0;
-            if (CheckIdentifierIsFree(ref vars, identifierHead))
-            {
-                if (!CheckPrevDefined(ref vars, identifierHead))
-                {
-                    var valueHeader = parsedLine[1].Trim();
-                    i++;
-                    if (i > source.Count)
-                    {
-                        return new ErrorRec(ErrorRec.ErrCodes.EcErrorInDefineExpression, i, "");
-                    }
-                    dest.Add(";" + line);
-                    line = source[i];
-                    trimLine = line.Trim();
-                    var structFuncs = new List<string>();
-                    structFuncs.Clear();
-                    while (trimLine.IndexOf("#ends", StringComparison.Ordinal) != 0)
-                    {
-                        var fieldSize = 0;
-                        parsedLine = trimLine.Split( '='); // equPos = trimLine.IndexOf('=');
-                        string identifier;
-                        string value;
-                        if (parsedLine.Length > 1)
-                        {
-                            var aStructFieldName = parsedLine[0].Trim();
-                            identifier = identifierHead + "." + aStructFieldName;
-                            if (!int.TryParse(parsedLine[1].Trim(), out fieldSize))
-                            {
-                                fieldSize = -1;
-                            }
-                            if (fieldSize < 1 || fieldSize > 31)
-                            {
-                                return new ErrorRec(ErrorRec.ErrCodes.EcErrorInParameters, i, "");
-                            }
-                            structFuncs.Add(";---------------------------");
-                            value = $"[_set_{identifierHead}_{aStructFieldName}]";
-
-                            structFuncs.Add(value);
-                            structFuncs.Add(";R0 - value");//  ;$VALUE - value, or use as parameter
-                            int bitFieldMask = 1 << fieldSize;
-                            bitFieldMask--;
-                            bitFieldMask <<= bitCount;
-                            value = bitCount > 0 
-                                ? $"{identifierHead}=&0x{(~bitFieldMask):X}, RA=<<0x{bitCount:X}, RA=&0x{bitFieldMask:X}, {identifierHead}=|RA" 
-                                : $"{identifierHead}=&0x{(~bitFieldMask):X}, R0=&0x{bitFieldMask:X}, {identifierHead}=|R0";
-                            structFuncs.Add(value);
-                            structFuncs.Add(";---------------------------");
-                            value = $"[_get_{identifierHead}_{aStructFieldName}]";
-                            structFuncs.Add(value);
-                            structFuncs.Add(";R0 - result");//  ;$VALUE - result
-                            value = bitCount > 0 
-                                ? $"R0={identifierHead}, R0=&0x{bitFieldMask:X}, R0=>>0x{bitCount:X}" 
-                                : $"R0={identifierHead}, R0=&0x{bitFieldMask:X}";
-                            structFuncs.Add(value);
-                            value = $"[{bitCount}]";
-                            bitCount += fieldSize;
-                        }
-                        else
-                        {
-                            identifier = identifierHead + "." + trimLine;
-                            value = $"[{bitCount}]";
-                            bitCount++;
-                        }
-                        if (CheckIdentifierIsFree(ref vars, identifier))
-                        {
-
-                            RearrangeDefs(ref vars, identifier, valueHeader + value);
-                            dest.Add(";" + line);
-                        }
-                        else
-                        {
-                            return new ErrorRec(ErrorRec.ErrCodes.EcErrorIdentifierAlreadyDefined, i, "");
-                        }
-                        for (int bc = 0; bc < fieldSize; bc++)
-                        {
-//                            value = System.String.Format("[%u]", bitCount - fieldSize + bc);
-                            value = $"[{bitCount - fieldSize + bc}]";
-                            var ident = identifier + $"[{bc}]";// + Convert.ToString(bc) + "]";
-                            if (CheckIdentifierIsFree(ref vars, ident))
-                            {
-                                RearrangeDefs(ref vars, ident, valueHeader + value);
-                                dest.Add(";" + line);
-                            }
-
-                        }
-                        i++;
-                        line = source[i];
-                        trimLine = line.Trim();
-                        if (i > source.Count)
-                        {
-                            return new ErrorRec(ErrorRec.ErrCodes.EcErrorInDefineExpression, i, "");
-                        }
-                    }
-                    RearrangeDefs(ref vars, identifierHead, valueHeader);
-                    dest.Add(";" + line);
-                    var result = Compile(ref structFuncs, out var strFuncAdd, ref vars);
-                    if (result != null && result.errorCode != ErrorRec.ErrCodes.EcOk )
-                    {
-                        return result;
-                    }
-                    AddPreCompiledLines(ref structFuncs, ref strFuncAdd, ref dest, ref vars);
-                    structFuncs.Clear();
-                }
-                else
-                {
-                    return new ErrorRec(ErrorRec.ErrCodes.EcErrorSubDefinePreviouslyDefined, i, "");
-                }
-            }
-            else
-            {
-                return new ErrorRec(ErrorRec.ErrCodes.EcErrorIdentifierAlreadyDefined, i, "");
-            }
-            return new ErrorRec();
-        }
+        private static int _fieldBytes(int fieldSize, int shift = 0)
+            => (fieldSize + shift) / 8 + (((fieldSize + shift) % 8) == 0 ? 0 : 1);
+        
 
         private static ErrorRec DoInclude(ref List<string> dest, ref KeyValList.KeyValList vars
                             , ref int i, ref string trimLine)
@@ -269,24 +157,24 @@ namespace HPLStudio
 
         public static void InitPredefinedVars(ref KeyValList.KeyValList vars)
         {
-            RearrangeDefs(ref vars, "$OPERATION", "RE");     // Код операции.
-            RearrangeDefs(ref vars, "$OPERATION.READ", "1");  // Значения кодов операции (USER - пользовательская операция)
-            RearrangeDefs(ref vars, "$OPERATION.VERIFY", "2");
-            RearrangeDefs(ref vars, "$OPERATION.WRITE", "3");
-            RearrangeDefs(ref vars, "$OPERATION.USER", "4");
+            PushDef(ref vars, "$OPERATION", "RE");     // Код операции.
+            PushDef(ref vars, "$OPERATION.READ", "1");  // Значения кодов операции (USER - пользовательская операция)
+            PushDef(ref vars, "$OPERATION.VERIFY", "2");
+            PushDef(ref vars, "$OPERATION.WRITE", "3");
+            PushDef(ref vars, "$OPERATION.USER", "4");
 
-            RearrangeDefs(ref vars, "$VALUE", "RA");          // Используется как параметр функций, и как результат комманды PRINT=A("..")
-            RearrangeDefs(ref vars, "$VALUE.Ok", "1");        //    Варианты результата PRINT=A()
-            RearrangeDefs(ref vars, "$VALUE.Cancel");
+            PushDef(ref vars, "$VALUE", "RA");          // Используется как параметр функций, и как результат комманды PRINT=A("..")
+            PushDef(ref vars, "$VALUE.Ok", "1");        //    Варианты результата PRINT=A()
+            PushDef(ref vars, "$VALUE.Cancel");
 
-            RearrangeDefs(ref vars, "#type.bin", "B");        // При описании интерфейсной части, символические имена типов отображения значений регистров
-            RearrangeDefs(ref vars, "#type.check_box", "C");
-            RearrangeDefs(ref vars, "#type.dec", "D");
-            RearrangeDefs(ref vars, "#type.hex_editor", "E");
-            RearrangeDefs(ref vars, "#type.hex", "H");
-            RearrangeDefs(ref vars, "#type.list", "L");
-            RearrangeDefs(ref vars, "#type.string", "S");
-            RearrangeDefs(ref vars, "#type.push_button", "P");
+            PushDef(ref vars, "#type.bin", "B");        // При описании интерфейсной части, символические имена типов отображения значений регистров
+            PushDef(ref vars, "#type.check_box", "C");
+            PushDef(ref vars, "#type.dec", "D");
+            PushDef(ref vars, "#type.hex_editor", "E");
+            PushDef(ref vars, "#type.hex", "H");
+            PushDef(ref vars, "#type.list", "L");
+            PushDef(ref vars, "#type.string", "S");
+            PushDef(ref vars, "#type.push_button", "P");
         }
 
         public static bool FuncDefCheck(string line, ref KeyValList.KeyValList vars, out string identifier)
@@ -297,7 +185,7 @@ namespace HPLStudio
                 identifier = m.Groups[1].Value;
                 if (vars.IndexOfKey(identifier) < 0)
                 {
-                    RearrangeDefs(ref vars, identifier, identifier);
+                    PushDef(ref vars, identifier, identifier);
                 }
                 return true;
             }
@@ -313,14 +201,20 @@ namespace HPLStudio
             if (commentPos >= 0) trimLine = trimLine.Substring(0, commentPos);
             return trimLine;
         }
-
+        /// <summary>
+        /// Обрабатывает секцию определений. 
+        /// </summary>
+        /// <param name="source">Исходный код</param>
+        /// <param name="dest">Обработанный код</param>
+        /// <param name="vars">Переменные</param>
+        /// <returns>При удаче возвращает EcOk и Номер строки с первой секцией (функцией). При ошибке возвращает строку ошибки.</returns>
         private static (int, ErrorRec) ProcessDefs(ref List<string> source, List<string> dest, ref KeyValList.KeyValList vars)
         {
             for (var i = 0; i < source.Count; i++)
             {
                 var line = source[i];
                 if (Regex.Match(line, SectionRegex).Success)
-                {
+                { // найдена первая секция "кода", выходим
                     return (i, new ErrorRec());
                 }
 
@@ -337,7 +231,7 @@ namespace HPLStudio
                     }
                     else if (trimLine.IndexOf("#struct", StringComparison.Ordinal) == 0)
                     {
-                        var r = DoStruct(ref source, ref dest, ref vars, ref i, ref trimLine, ref line);
+                        var r = HpmStruct.DoStruct(ref source, ref dest, ref vars, ref i, ref trimLine, ref line);
                         if (r.errorCode != ErrorRec.ErrCodes.EcOk)
                         {
                             return (i, r);
@@ -396,7 +290,7 @@ namespace HPLStudio
                     if (equPos > 1)
                     {
                         var value = identifier.Substring(1, equPos - 1).Trim();
-                        RearrangeDefs(ref vars, value, value);
+                        PushDef(ref vars, value, value);
                         return new ErrorRec();
                     }
                     return new ErrorRec(ErrorRec.ErrCodes.EcErrorInInitSectionExpression, idx, "");
@@ -407,22 +301,73 @@ namespace HPLStudio
             return new ErrorRec();
         }
 
-        public static ErrorRec Compile(ref List<string> source, out string[] dest, ref KeyValList.KeyValList vars)
+        public static List<string> ExtractFuncDefs(List<string> source, int codeStart, ref KeyValList.KeyValList vars, List<string> functions=null)
         {
-            if (vars.Count == 0) InitPredefinedVars(ref vars);
-            var destBuf = new List<string>();
-            var (codeStart, r) = ProcessDefs(ref source, destBuf, ref vars);
-
-            var reservedNames = new List<string>();
+            var funcs = functions ?? new List<string>();
             for (var i = codeStart; i < source.Count; i++)
             {
                 var line = source[i];
                 if (FuncDefCheck(line, ref vars, out var identifier))
                 {
-                    reservedNames.Add(identifier);
+                    funcs.Add(identifier);
                 }
-
             }
+            return funcs;
+        }
+
+        private static List<string> StoreStrings(ref List<string> source)
+        {
+            var strings = new List<string>();
+            for (var i = 0; i < source.Count; i++)
+            {
+                var line = source[i];
+                foreach (Match m in Regex.Matches(line, "(\".*\")"))
+                {
+                    line = line.Replace(m.Groups[1].Value, $"{{${strings.Count}$}}");
+                    strings.Add(m.Groups[1].Value);
+                }
+                source[i] = line;
+            }
+
+            return strings;
+        }
+
+        private static void RestoreStrings(ref List<string> source, List<string> strings)
+        {
+            for (var i = 0; i < source.Count; i++)
+            {
+                var line = source[i];
+                foreach (Match m in Regex.Matches(line, @"\{\$(\d+)\$\}"))
+                {
+                    if (int.TryParse(m.Groups[1].Value, out var value))
+                    {
+                        line = line.Replace($"{{${value}$}}", strings[value]);
+                    }
+                }
+                source[i] = line;
+            }
+        }
+
+
+        public static ErrorRec Compile(ref List<string> source, out string[] dest, ref KeyValList.KeyValList vars)
+        {
+            if (vars.Count == 0) InitPredefinedVars(ref vars);
+
+            var savedStrings = StoreStrings(ref source);
+
+            var destBuf = new List<string>();
+            var (codeStart, r) = ProcessDefs(ref source, destBuf, ref vars);
+            if (r.errorCode != ErrorRec.ErrCodes.EcOk)
+            {
+                dest = destBuf.ToArray();
+                return r;
+            }
+
+            // список имен, в которых не будет производиться подмена макроопределений
+            // Для того чтобы в случаях, как в примере ниже, не портилось имя функции
+            // #def CRC=R2
+            // [_CalcCRC]
+            var reservedNames = ExtractFuncDefs(source, codeStart, ref vars);
 
             for (var i = codeStart; i < source.Count; i++)
             {
@@ -437,34 +382,40 @@ namespace HPLStudio
 
                 foreach (var kv in vars.List)
                 {
-                    if (kv.Key == kv.Value)
+                    if (kv.Key == kv.Value && !reservedNames.Contains(kv.Key))
                     {
                         reservedNames.Add(kv.Key);
                     }
                     else
                     {
-                        var reserved = reservedNames.FindAll(x => x.Contains(kv.Key));
-                        if (reserved?.Count > 0)
+                        if (trimLine.Contains(kv.Key))
                         {
+                            var reserved = reservedNames.FindAll(x => x.Contains(kv.Key) && trimLine.Contains(x));
+                            if (reserved?.Count > 0)
+                            {
 
-                            for (var ri = 0; ri < reserved.Count; ri++)
-                            {
-                                trimLine = trimLine.Replace(reserved[ri], $"<##{ri}##>");
+                                for (var ri = 0; ri < reserved.Count; ri++)
+                                {
+                                    trimLine = trimLine.Replace(reserved[ri], $"<##{ri}##>");
+                                }
                                 trimLine = trimLine.Replace(kv.Key, kv.Value);
+                                for (var ri = reserved.Count - 1; ri >= 0; ri--)
+                                {
+                                    trimLine = trimLine.Replace($"<##{ri}##>", reserved[ri]);
+                                }
                             }
-                            trimLine = trimLine.Replace(kv.Key, kv.Value);
-                            for (var ri = reserved.Count - 1; ri >= 0; ri--)
-                            {
-                                trimLine = trimLine.Replace($"<##{ri}##>", reserved[ri]);
-                            }
+                            else
+                                trimLine = trimLine.Replace(kv.Key, kv.Value);
                         }
-                        else
-                            trimLine = trimLine.Replace(kv.Key, kv.Value);
                     }
                 }
-                line = line.Replace(origTrimLine, trimLine);
+                if( origTrimLine != trimLine)
+                    line = line.Replace(origTrimLine, trimLine);
+                line = HpmStruct.ApplyGetterSetter(line);
                 destBuf.AddRange(line.Split(new string[] { Environment.NewLine }, StringSplitOptions.None));
             }
+            RestoreStrings(ref source, savedStrings);
+            RestoreStrings(ref destBuf, savedStrings);
 
             dest = destBuf.ToArray();
             return new ErrorRec();
@@ -480,7 +431,8 @@ namespace HPLStudio
         public static string[] registers = {"$SIZE", "$MAXSIZE", "$FREQ", "$CHNS", "$AREA", "$BLOCKSIZE", "$CDELAY", "$WDELAY"
                                              , "$VERIFY", "$VERSION", "R0", "R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8"
                                              , "R9", "RA", "RB", "RC", "RD", "RE", "RF", "R10", "R11", "R12", "R13", "R14"
-                                             , "R15", "R16", "R17", "R18", "R19", "R1A", "R1B", "R1C", "R1D", "R1E", "R1F"};
+                                             , "R15", "R16", "R17", "R18", "R19", "R20", "R21", "R22", "R23", "R24", "R25"
+                                             , "R26", "R27", "R28", "R29", "R30", "R31", "R1A", "R1B", "R1C", "R1D", "R1E", "R1F" };
         public static string[] addons = {    "#def","#struct","#ends","#macro","#endm"
                                             ,"$OPERATION","$OPERATION.READ","$OPERATION.VERIFY","$OPERATION.WRITE","$OPERATION.USER"
                                             ,"$VALUE","$VALUE.Ok","$VALUE.Cancel"
@@ -514,7 +466,7 @@ namespace HPLStudio
             }
             return false;
         }
-       public static bool RearrangeDefs(ref KeyValList.KeyValList vars, string identifier, string value = "0")
+       public static bool PushDef(ref KeyValList.KeyValList vars, string identifier, string value = "0")
         {
             
             var foundKeys = new List<string>(); 
@@ -530,7 +482,10 @@ namespace HPLStudio
             }
             vars[identifier] = value;
             return false;
-        }    
+        }
+
     }
+
+   
 }
  

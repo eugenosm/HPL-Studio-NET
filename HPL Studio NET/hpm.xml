@@ -12,8 +12,8 @@
     <rule style="CommentStyle" options="Multiline">;.*$</rule>
     <rule style="NumberStyle">\b\d+[\.]?\d*([eE]\-?\d+)?[lLdDfF]?\b|\b0x[a-fA-F\d]+\b</rule>
     <rule style="FunctionNameStyle" options="Multiline">^\s*(?&lt;range&gt;\[.+?\])\s*$</rule>
-  <rule style="KeywordStyle2">\$AREA\b|\$BLOCKSIZE\b|\$CDELAY\b|\$CHNS\b|\$FREQ\b|\$MAXSIZE\b|\$SIZE\b|\$VERIFY\b|\$VERSION\b|\$WDELAY\b|\$MODE\b|\$MCUCLK|\b(R0|R1|R10|R11|R12|R13|R14|R15|R16|R17|R18|R19|R1A|R1B|R1C|R1D|R1E|R1F|R2|R3|R4|R5|R6|R7|R8|R9|RA|RB|RC|RD|RE|RF|VCC|VPP)\b</rule>
-  <rule style="KeywordStyle">\b(ADR|ALLPINS|ALTNAME|BCOLOR|BGCOLOR|BREAK|BUSI|BUSO|CDELAY|CFREQ|CONST|DATA|EXIT|GAP|GET|HPL|IDISABLE|IENABLE|IMAGE|INFO|INFOFILE|LOOP|MARK|MATRIX|OPTIONS|PIN|PING|PINI|PINO|PLACE|POWER|PRINT|REG|RETURN|SHAPE|SIZE|SOCKET|SPACE|TCOLOR|TD|TL|TR|TU)\b</rule>
+  <rule style="KeywordStyle2">\$AREA\b|\$BLOCKSIZE\b|\$CDELAY\b|\$CHNS\b|\$FREQ\b|\$MAXSIZE\b|\$SIZE\b|\$VERIFY\b|\$VERSION\b|\$WDELAY\b|\$MODE\b|\$MCUCLK|\b(R1[0-9a-fA-F]|R[0-9a-fA-F]|VCC|VPP)\b</rule>
+  <rule style="KeywordStyle">\b(ADR|ALLPINS|ALTNAME|BCOLOR|BGCOLOR|BREAK|BUSI|BUSO|CDELAY|CFREQ|CONST|DATA|EXIT|GAP|GET|HPL|IDISABLE|IENABLE|IMAGE|INFO|INFOFILE|LOOP|MARK|MATRIX|OPTIONS|PIN[GIO]?|PLACE|POWER|PRINT|REG|RETURN|SHAPE|SIZE|SOCKET|SPACE|TCOLOR|T[DLRU])\b</rule>
     <rule style="Directives">(\#def|\#struct|\#ends|\#macro|\#endm|\$OPERATION(\.READ|\.VERIFY|\.WRITE|\.USER)?|\$VALUE(\.Ok|\.Cancel)?|#type\.(bin|check_box|dec|hex_editor|hex|list|string|push_button)?)\b</rule>
 	<rule style="KeywordStyle">\b(?&lt;range&gt;P)[\s]?\=</rule>
 	<rule style="KeywordStyle">\bPRINT[\s]?=[\s]?(?&lt;range&gt;E|S|T|L|P|A)</rule>

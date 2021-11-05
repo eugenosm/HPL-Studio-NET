@@ -51,7 +51,7 @@
             this.selectedToolHelpMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem2 = new System.Windows.Forms.ToolStripSeparator();
             this.оПрограммеToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.NewFileStrip1 = new System.Windows.Forms.ToolStrip();
+            this.ToolStrip1 = new System.Windows.Forms.ToolStrip();
             this.NewButton1 = new System.Windows.Forms.ToolStripButton();
             this.OpenButton1 = new System.Windows.Forms.ToolStripButton();
             this.SaveButton1 = new System.Windows.Forms.ToolStripButton();
@@ -65,7 +65,7 @@
             this.tsFiles = new FarsiLibrary.Win.FATabStrip();
             this.faTabStripItem1 = new FarsiLibrary.Win.FATabStripItem();
             this.menuStrip1.SuspendLayout();
-            this.NewFileStrip1.SuspendLayout();
+            this.ToolStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.tsFiles)).BeginInit();
             this.SuspendLayout();
             // 
@@ -177,14 +177,14 @@
             // PreprocessorMenuItem
             // 
             this.PreprocessorMenuItem.Name = "PreprocessorMenuItem";
-            this.PreprocessorMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.PreprocessorMenuItem.Size = new System.Drawing.Size(146, 22);
             this.PreprocessorMenuItem.Text = "Собрать";
             this.PreprocessorMenuItem.Click += new System.EventHandler(this.PreprocessorMenuItem_Click);
             // 
             // ToPassToMenuItem
             // 
             this.ToPassToMenuItem.Name = "ToPassToMenuItem";
-            this.ToPassToMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.ToPassToMenuItem.Size = new System.Drawing.Size(146, 22);
             this.ToPassToMenuItem.Text = "Передать в ,,,";
             this.ToPassToMenuItem.Click += new System.EventHandler(this.ToPassToMenuItem_Click);
             // 
@@ -230,10 +230,10 @@
             this.оПрограммеToolStripMenuItem.Size = new System.Drawing.Size(206, 22);
             this.оПрограммеToolStripMenuItem.Text = "О программе...";
             // 
-            // NewFileStrip1
+            // ToolStrip1
             // 
-            this.NewFileStrip1.GripStyle = System.Windows.Forms.ToolStripGripStyle.Hidden;
-            this.NewFileStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.ToolStrip1.GripStyle = System.Windows.Forms.ToolStripGripStyle.Hidden;
+            this.ToolStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.NewButton1,
             this.OpenButton1,
             this.SaveButton1,
@@ -243,11 +243,11 @@
             this.CompileButton1,
             this.toPassInButton1,
             this.toolStripSeparator3});
-            this.NewFileStrip1.Location = new System.Drawing.Point(0, 24);
-            this.NewFileStrip1.Name = "NewFileStrip1";
-            this.NewFileStrip1.Size = new System.Drawing.Size(746, 25);
-            this.NewFileStrip1.TabIndex = 4;
-            this.NewFileStrip1.Text = "toolStrip1";
+            this.ToolStrip1.Location = new System.Drawing.Point(0, 24);
+            this.ToolStrip1.Name = "ToolStrip1";
+            this.ToolStrip1.Size = new System.Drawing.Size(746, 25);
+            this.ToolStrip1.TabIndex = 4;
+            this.ToolStrip1.Text = "toolStrip1";
             // 
             // NewButton1
             // 
@@ -355,7 +355,7 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(746, 547);
             this.Controls.Add(this.tsFiles);
-            this.Controls.Add(this.NewFileStrip1);
+            this.Controls.Add(this.ToolStrip1);
             this.Controls.Add(this.statusStrip1);
             this.Controls.Add(this.menuStrip1);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
@@ -364,8 +364,8 @@
             this.Load += new System.EventHandler(this.Form1_Load);
             this.menuStrip1.ResumeLayout(false);
             this.menuStrip1.PerformLayout();
-            this.NewFileStrip1.ResumeLayout(false);
-            this.NewFileStrip1.PerformLayout();
+            this.ToolStrip1.ResumeLayout(false);
+            this.ToolStrip1.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.tsFiles)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
@@ -382,7 +382,7 @@
         private System.Windows.Forms.ToolStripMenuItem newFileMenuItem;
         private System.Windows.Forms.ToolStripMenuItem openFileMenuItem;
         private System.Windows.Forms.ToolStripMenuItem saveMenuItem;
-        private System.Windows.Forms.ToolStrip NewFileStrip1;
+        private System.Windows.Forms.ToolStrip ToolStrip1;
         private System.Windows.Forms.ToolStripMenuItem saveAsMenuItem;
         private System.Windows.Forms.PrintDialog printDialog1;
         private System.Windows.Forms.ToolStripButton NewButton1;
