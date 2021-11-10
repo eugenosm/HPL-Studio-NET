@@ -61,6 +61,7 @@
             this.CompileButton1 = new System.Windows.Forms.ToolStripButton();
             this.toPassInButton1 = new System.Windows.Forms.ToolStripButton();
             this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
+            this.changeHotKeysButton = new System.Windows.Forms.ToolStripButton();
             this.printDialog1 = new System.Windows.Forms.PrintDialog();
             this.tsFiles = new FarsiLibrary.Win.FATabStrip();
             this.faTabStripItem1 = new FarsiLibrary.Win.FATabStripItem();
@@ -242,7 +243,8 @@
             this.toolStripSeparator2,
             this.CompileButton1,
             this.toPassInButton1,
-            this.toolStripSeparator3});
+            this.toolStripSeparator3,
+            this.changeHotKeysButton});
             this.ToolStrip1.Location = new System.Drawing.Point(0, 24);
             this.ToolStrip1.Name = "ToolStrip1";
             this.ToolStrip1.Size = new System.Drawing.Size(746, 25);
@@ -302,7 +304,7 @@
             // CompileButton1
             // 
             this.CompileButton1.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-            this.CompileButton1.Image = global::HPLStudio.Properties.Resources.wrench_orange;
+            this.CompileButton1.Image = global::HPLStudio.Properties.Resources.icons8_system_information_32;
             this.CompileButton1.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.CompileButton1.Name = "CompileButton1";
             this.CompileButton1.Size = new System.Drawing.Size(23, 22);
@@ -312,7 +314,7 @@
             // toPassInButton1
             // 
             this.toPassInButton1.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-            this.toPassInButton1.Image = global::HPLStudio.Properties.Resources.cog_go;
+            this.toPassInButton1.Image = global::HPLStudio.Properties.Resources.icons8_next_32;
             this.toPassInButton1.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.toPassInButton1.Name = "toPassInButton1";
             this.toPassInButton1.Size = new System.Drawing.Size(23, 22);
@@ -323,6 +325,17 @@
             // 
             this.toolStripSeparator3.Name = "toolStripSeparator3";
             this.toolStripSeparator3.Size = new System.Drawing.Size(6, 25);
+            // 
+            // changeHotKeysButton
+            // 
+            this.changeHotKeysButton.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+            this.changeHotKeysButton.Image = global::HPLStudio.Properties.Resources.icons8_keyboard_32;
+            this.changeHotKeysButton.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this.changeHotKeysButton.Name = "changeHotKeysButton";
+            this.changeHotKeysButton.Size = new System.Drawing.Size(23, 22);
+            this.changeHotKeysButton.Text = "toolStripButton1";
+            this.changeHotKeysButton.ToolTipText = "Настройка горячих клавиш";
+            this.changeHotKeysButton.Click += new System.EventHandler(this.changeHotKeysButton_Click);
             // 
             // printDialog1
             // 
@@ -409,6 +422,7 @@
         private System.Windows.Forms.ToolStripMenuItem recentFilesMenuItem;
         private FarsiLibrary.Win.FATabStrip tsFiles;
         private FarsiLibrary.Win.FATabStripItem faTabStripItem1;
+        private System.Windows.Forms.ToolStripButton changeHotKeysButton;
     }
 }
 

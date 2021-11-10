@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Windows.Forms;
 
 
 namespace HPLStudio
@@ -17,20 +15,24 @@ namespace HPLStudio
             EcErrorIncorrectDirective, EcErrorIdentifierAlreadyDefined, EcErrorInInitSectionExpression,
             EcErrorSubDefinePreviouslyDefined, EcErrorInParameters, EcErrorInSectionName
         };
-        public ErrCodes errorCode;
-        public int errorLine;
-        public string fileName;
+        public ErrCodes Code { get; set; }
+        public int LineNo { get; set; }
+        public string FileName { get; set; }
+
+        public string Info { get; set; }
         public ErrorRec()
         {
-            errorCode = ErrCodes.EcOk;
-            errorLine = 0;
-            fileName = "";
+            Code = ErrCodes.EcOk;
+            LineNo = 0;
+            FileName = "";
+            Info = null;
         }
         public ErrorRec(ErrCodes code, int line, string file)
         {
-            errorCode = code;
-            errorLine = line;
-            fileName = file;
+            Code = code;
+            LineNo = line;
+            FileName = file;
+            Info = null;
         }
         public static string ErrorTextByCode(ErrCodes code)
         {
@@ -43,14 +45,19 @@ namespace HPLStudio
                 ErrCodes.EcErrorIncorrectDirective => "Error Incorrect Directive",
                 ErrCodes.EcErrorIdentifierAlreadyDefined => "Error Identifier Already Defined",
                 ErrCodes.EcErrorInInitSectionExpression => "Error in Init Section Expression",
-                ErrCodes.EcErrorSubDefinePreviouslyDefined => "Error Subdefine Previously Defined",
+                ErrCodes.EcErrorSubDefinePreviouslyDefined => "Error: Subdefine Previously Defined",
                 ErrCodes.EcErrorInParameters => "Error Parameters Out Of Range or of Incorrect Type",
-                ErrCodes.EcErrorInSectionName => "Incorrect Section Name. F.ex. generated setter or is too long.",
+                ErrCodes.EcErrorInSectionName => "Incorrect Section Name.",
                 _ => "Unknown Error"
             };
         }
 
-        public override string ToString() { return ErrorTextByCode(errorCode) + ", in file <" + fileName + ">, at line: " + errorLine.ToString(); }
+        public override string ToString()
+        {
+            return (Info is null)
+                ? $"{ErrorTextByCode(Code)}, in file <{FileName}>, at line: {LineNo}"
+                : $"{ErrorTextByCode(Code)} ({Info}), in file <{FileName}>, at line: {LineNo}";
+        }
     };
 
     internal class Preprocessor
@@ -137,11 +144,11 @@ namespace HPLStudio
             {
                 var include = System.IO.File.ReadAllLines(includeFileName).ToList();
                 var result = Compile(ref include, out var dst, ref vars);                           
-                if (result != null && result.errorCode != ErrorRec.ErrCodes.EcOk)
+                if (result != null && result.Code != ErrorRec.ErrCodes.EcOk)
                 {
-                    if (string.IsNullOrEmpty(result.fileName))
+                    if (string.IsNullOrEmpty(result.FileName))
                     {
-                        result.fileName = includeFileName;
+                        result.FileName = includeFileName;
                     }
                     return result;
                 }
@@ -224,7 +231,7 @@ namespace HPLStudio
                     if (trimLine.IndexOf("#def", StringComparison.Ordinal) == 0)
                     {
                         var r = DoDef(ref source, ref dest, ref vars, ref i, ref trimLine);
-                        if (r.errorCode != ErrorRec.ErrCodes.EcOk)
+                        if (r.Code != ErrorRec.ErrCodes.EcOk)
                         {
                             return (i, r);
                         }
@@ -232,7 +239,7 @@ namespace HPLStudio
                     else if (trimLine.IndexOf("#struct", StringComparison.Ordinal) == 0)
                     {
                         var r = HpmStruct.DoStruct(ref source, ref dest, ref vars, ref i, ref trimLine, ref line);
-                        if (r.errorCode != ErrorRec.ErrCodes.EcOk)
+                        if (r.Code != ErrorRec.ErrCodes.EcOk)
                         {
                             return (i, r);
                         }
@@ -240,7 +247,7 @@ namespace HPLStudio
                     else if (trimLine.IndexOf("#macro", StringComparison.Ordinal) == 0)
                     {
                         var r = DoMacro(ref source, ref dest, ref vars, ref i, ref trimLine);
-                        if (r.errorCode != ErrorRec.ErrCodes.EcOk)
+                        if (r.Code != ErrorRec.ErrCodes.EcOk)
                         {
                             return (i, r);
                         }
@@ -249,7 +256,7 @@ namespace HPLStudio
                     else if (trimLine.IndexOf("#include", StringComparison.Ordinal) == 0)
                     {
                         var r = DoInclude(ref dest, ref vars, ref i, ref trimLine);
-                        if (r.errorCode != ErrorRec.ErrCodes.EcOk)
+                        if (r.Code != ErrorRec.ErrCodes.EcOk)
                         {
                             return (i, r);
                         }
@@ -263,7 +270,7 @@ namespace HPLStudio
                 else
                 {
                     var r = ProcessSocketAndVars(ref dest, ref vars, line, trimLine, i);
-                    if (r.errorCode != ErrorRec.ErrCodes.EcOk) return (i, r);
+                    if (r.Code != ErrorRec.ErrCodes.EcOk) return (i, r);
                 }
             }
 
@@ -321,7 +328,7 @@ namespace HPLStudio
             for (var i = 0; i < source.Count; i++)
             {
                 var line = source[i];
-                foreach (Match m in Regex.Matches(line, "(\".*\")"))
+                foreach (Match m in Regex.Matches(line, "(\".*?\")"))
                 {
                     line = line.Replace(m.Groups[1].Value, $"{{${strings.Count}$}}");
                     strings.Add(m.Groups[1].Value);
@@ -332,7 +339,8 @@ namespace HPLStudio
             return strings;
         }
 
-        private static void RestoreStrings(ref List<string> source, List<string> strings)
+
+        private static void RestoreStrings(ref List<string> source, IReadOnlyList<string> strings)
         {
             for (var i = 0; i < source.Count; i++)
             {
@@ -357,7 +365,7 @@ namespace HPLStudio
 
             var destBuf = new List<string>();
             var (codeStart, r) = ProcessDefs(ref source, destBuf, ref vars);
-            if (r.errorCode != ErrorRec.ErrCodes.EcOk)
+            if (r.Code != ErrorRec.ErrCodes.EcOk)
             {
                 dest = destBuf.ToArray();
                 return r;
@@ -473,11 +481,9 @@ namespace HPLStudio
             //var foundVals = new List<string>();
             for (var i = 0; i < vars.Count; i++)
             {
-                if (identifier.IndexOf(vars[i], StringComparison.Ordinal) >= 0)
-                {
-                    vars.Insert(i,identifier,value);
-                    return true;
-                }
+                if (identifier.IndexOf(vars[i], StringComparison.Ordinal) < 0) continue;
+                vars.Insert(i,identifier,value);
+                return true;
 
             }
             vars[identifier] = value;

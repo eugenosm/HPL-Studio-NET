@@ -160,6 +160,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="omega.ico" />
+    <None Include="Resources\icons8-keyboard-32.png" />
+    <None Include="Resources\icons8-system-information-32.png" />
+    <None Include="Resources\icons8-next-32.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

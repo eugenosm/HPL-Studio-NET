@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 
 namespace HPLStudio
 {
+
     internal class HpmStruct
     {
         public const string GetSetRe = 
@@ -59,77 +60,86 @@ namespace HPLStudio
                     structFuncs.Clear();
                     while (trimLine.IndexOf("#ends", StringComparison.Ordinal) != 0)
                     {
-                        parsedLine = trimLine.Split('='); // equPos = trimLine.IndexOf('=');
-                        string identifier;
-                        string value;
-                        var fieldSize = (parsedLine.Length > 1)
-                            ? int.TryParse(parsedLine[1].Trim(), out var fs) ? fs : -1
-                            : 1;
-
-                        if (isArray || fieldSize != 1)
+                        if (trimLine.StartsWith(";"))
                         {
-                            var aStructFieldName = parsedLine[0].Trim();
-                            identifier = identifierHead + "." + aStructFieldName;
-                            if (fieldSize is < 1 or > 32)
-                            {
-                                return new ErrorRec(ErrorRec.ErrCodes.EcErrorInParameters, srcLine, "");
-                            }
-                            structFuncs.Add(";---------------------------");
-                            var fname = $"[_set_{identifierHead}_{aStructFieldName}]";
-
-                            if (fname.Length > 20)
-                            {
-                                return new ErrorRec(ErrorRec.ErrCodes.EcErrorInSectionName, srcLine, "");
-                            }
-                            structFuncs.Add(fname);
-                            structFuncs.Add(";R0 - value");//  ;$VALUE - value, or use as parameter
-                            var bitFieldMask = ((1 << fieldSize) - 1) << bitPos;
-
-                            var field = (isArray)
-                                ? new ArrStructField(identifierHead, bitPos, fieldSize)
-                                : new StructField(identifierHead, bitPos, fieldSize);
-
-                            structFuncs.Add(field.Setter);
-                            structFuncs.Add(";---------------------------");
-                            value = $"[_get_{identifierHead}_{aStructFieldName}]";
-                            structFuncs.Add(value);
-                            structFuncs.Add(";R0 - result");//  ;$VALUE - result
-                            structFuncs.Add(field.Getter);
-                            value = $"{{_get_set({identifierHead}_{aStructFieldName})}}";
-                            Preprocessor.PushDef(ref vars, value, value);
-                            bitPos += fieldSize;
+                            dest.Add(line);
                         }
                         else
                         {
-                            identifier = identifierHead + "." + trimLine;
-                            value = $"[{bitPos}]";
-                            bitPos++;
-                        }
+                            parsedLine = trimLine.Split('='); // equPos = trimLine.IndexOf('=');
+                            string identifier;
+                            string value;
+                            var fieldSize = (parsedLine.Length > 1)
+                                ? int.TryParse(parsedLine[1].Trim(), out var fs) ? fs : -1
+                                : 1;
 
-                        if (Preprocessor.CheckIdentifierIsFree(ref vars, identifier))
-                        {
-
-                            Preprocessor.PushDef(ref vars, identifier, valueHeader + value);
-                            dest.Add(";" + line);
-                        }
-                        else
-                        {
-                            return new ErrorRec(ErrorRec.ErrCodes.EcErrorIdentifierAlreadyDefined, srcLine, "");
-                        }
-
-                        if (!isArray)
-                        {
-                            for (var bc = 0; bc < fieldSize; bc++)
+                            if (isArray || fieldSize != 1)
                             {
-                                value = $"[{bitPos - fieldSize + bc}]";
-                                var ident = identifier + $"[{bc}]";
-                                if (Preprocessor.CheckIdentifierIsFree(ref vars, ident))
+                                var aStructFieldName = parsedLine[0].Trim();
+                                identifier = identifierHead + "." + aStructFieldName;
+                                if (fieldSize is < 1 or > 32)
                                 {
-                                    Preprocessor.PushDef(ref vars, ident, valueHeader + value);
+                                    return new ErrorRec(ErrorRec.ErrCodes.EcErrorInParameters, srcLine, "");
+                                }
+                                structFuncs.Add(";---------------------------");
+                                var funcName = $"[_set_{identifierHead}_{aStructFieldName}]";
+
+                                if (funcName.Length > 22)
+                                {
+                                    return new ErrorRec(ErrorRec.ErrCodes.EcErrorInSectionName, srcLine, "")
+                                    {
+                                        Info = $"_set_{identifierHead}_{aStructFieldName}"
+                                    };
+                                }
+                                structFuncs.Add(funcName);
+                                structFuncs.Add(";R0 - value");//  ;$VALUE - value, or use as parameter
+                                
+                                var field = (isArray)
+                                    ? new ArrStructField(identifierHead, bitPos, fieldSize)
+                                    : new StructField(identifierHead, bitPos, fieldSize);
+
+                                structFuncs.Add(field.Setter);
+                                structFuncs.Add(";---------------------------");
+                                value = $"[_get_{identifierHead}_{aStructFieldName}]";
+                                structFuncs.Add(value);
+                                structFuncs.Add(";R0 - result");//  ;$VALUE - result
+                                structFuncs.Add(field.Getter);
+                                value = $"{{_get_set({identifierHead}_{aStructFieldName})}}";
+                                Preprocessor.PushDef(ref vars, value, value);
+                                bitPos += fieldSize;
+                            }
+                            else
+                            {
+                                identifier = identifierHead + "." + trimLine;
+                                value = $"[{bitPos}]";
+                                bitPos++;
+                            }
+
+                            if (Preprocessor.CheckIdentifierIsFree(ref vars, identifier))
+                            {
+
+                                Preprocessor.PushDef(ref vars, identifier, valueHeader + value);
+                                dest.Add(";" + line);
+                            }
+                            else
+                            {
+                                return new ErrorRec(ErrorRec.ErrCodes.EcErrorIdentifierAlreadyDefined, srcLine, "");
+                            }
+
+                            if (!isArray)
+                            {
+                                for (var bc = 0; bc < fieldSize; bc++)
+                                {
+                                    value = $"[{bitPos - fieldSize + bc}]";
+                                    var ident = identifier + $"[{bc}]";
+                                    if (Preprocessor.CheckIdentifierIsFree(ref vars, ident))
+                                    {
+                                        Preprocessor.PushDef(ref vars, ident, valueHeader + value);
+                                    }
+
                                 }
 
                             }
-
                         }
 
                         srcLine++;
@@ -143,7 +153,7 @@ namespace HPLStudio
                     Preprocessor.PushDef(ref vars, identifierHead, valueHeader);
                     dest.Add(";" + line);
                     var result = Preprocessor.Compile(ref structFuncs, out var strFuncAdd, ref vars);
-                    if (result != null && result.errorCode != ErrorRec.ErrCodes.EcOk)
+                    if (result != null && result.Code != ErrorRec.ErrCodes.EcOk)
                     {
                         return result;
                     }

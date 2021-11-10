@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Runtime.Remoting.Messaging;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
@@ -12,7 +14,6 @@ using FastColoredTextBoxNS;
 using System.Text.RegularExpressions;
 using FarsiLibrary.Win;
 using HPLStudio.Properties;
-using Microsoft.Win32;
 
 namespace HPLStudio
 {
@@ -27,7 +28,8 @@ namespace HPLStudio
         public string pathString = "";
         public string exeString = "";
         public string helpSting = "";
-        public string hplSubDir = "/hpl";
+        public string processString = "";
+        public string hplSubDir = "\\hpl";
         public string defaultHplExtension = ".hpl";
         public string fileExtensions = Resources.STR_FileFilters;
 //        public string xmlString = "";
@@ -40,12 +42,15 @@ namespace HPLStudio
         private const int SW_MAXIMIZE = 3;
         private const int SW_SHOW = 5;
         private const int SW_MINIMIZE = 6;
+        private const int SW_RESTORE = 9;
 
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
         [DllImport("user32.dll")]
         private static extern bool SetForegroundWindow(IntPtr hWnd);
+        [DllImport("user32.dll")]
+        private static extern int SetActiveWindow( IntPtr hWnd);
 
         private readonly RecentFileHandler _recentFileHandler;
         public Form1()
@@ -77,7 +82,7 @@ namespace HPLStudio
                 CreateTab(fileName);
             }
             TextEditor.Text = System.IO.File.ReadAllText(fileName);
-            //FileName = fileName;
+            //FileName = FileName;
             isFileNew = false;
         }
 
@@ -97,9 +102,12 @@ namespace HPLStudio
             }
         }
 
+        private HotkeysMapping defaultHotkeysMapping = null;
+
         private FastColoredTextBox TextEditor
         {
-            get => tsFiles.SelectedItem?.Controls[0] as FastColoredTextBox;
+            get => (tsFiles.SelectedItem is null || tsFiles.SelectedItem.Controls.Count == 0) 
+                ? null : tsFiles.SelectedItem?.Controls[0] as FastColoredTextBox;
 
             set
             {
@@ -150,6 +158,9 @@ namespace HPLStudio
                 popupMenu.Opening += popupMenu_Opening;
                 BuildAutocompleteMenu(popupMenu);
                 ((TbInfo)tb.Tag).popupMenu = popupMenu;
+                if (defaultHotkeysMapping != null) tb.HotkeysMapping = defaultHotkeysMapping;
+                tb.CustomAction += new System.EventHandler<FastColoredTextBoxNS.CustomActionEventArgs>(this.fctb_CommentAction);
+
             }
             catch (Exception ex)
             {
@@ -212,6 +223,7 @@ namespace HPLStudio
             exeString = iniFile.GetString(name, "exe", "");
             pathString = iniFile.GetString(name, "path", "");
             helpSting = iniFile.GetString(name, "help", "");
+            processString = iniFile.GetString(name, "process", "");
             defaultHplExtension = iniFile.GetString(name, "defaultExt", ".hpl");
             fileExtensions = iniFile.GetString(name, "fileExts", "");
             if (fileExtensions == "")
@@ -282,10 +294,20 @@ namespace HPLStudio
             _paletteHplWindowColor = Color.FromArgb(215, 228, 242);
             _paletteHpmWindowColor = Color.FromArgb(255, 255, 210);
 
+            defaultHotkeysMapping = new HotkeysMapping();
+            defaultHotkeysMapping.InitDefault();
+            defaultHotkeysMapping.Add(Keys.Control | Keys.OemSemicolon, FCTBAction.CustomAction1);
+            defaultHotkeysMapping.Add(Keys.Control | Keys.OemSemicolon | Keys.Shift, FCTBAction.CustomAction2);
         }
 
         private System.Diagnostics.Process _progerWindow = null;
         private string _progerWindowSoftware = "";
+
+        private void ActivateApp(Process process)
+        {
+            ShowWindow(_progerWindow.MainWindowHandle, SW_RESTORE);
+            SetForegroundWindow(_progerWindow.MainWindowHandle);
+        }
 
         private void ToPassToMenuItem_Click(object sender, EventArgs e)
         {
@@ -294,7 +316,7 @@ namespace HPLStudio
             var justFileName = System.IO.Path.GetFileNameWithoutExtension(FileName);
             if (workDir != null && workDir.IndexOf(pathString, StringComparison.Ordinal) < 0)
             {
-                var resultFileName = pathString + "/" + hplSubDir + "/" + justFileName + defaultHplExtension;
+                var resultFileName = pathString + "\\" + hplSubDir + "\\" + justFileName + defaultHplExtension;
                 
                 var fileTab = FindFileTab($"{workDir}/{justFileName}{defaultHplExtension}")?.Controls[0];
                 if (fileTab is FastColoredTextBox fctb)
@@ -304,14 +326,34 @@ namespace HPLStudio
             }
 
 //            saveAsMenuItem_Click(sender, e);
-            var passTo = pathString + '/' + exeString;
-            if (_progerWindow != null && !_progerWindow.HasExited && _progerWindow.ProcessName != ""  && passTo == _progerWindowSoftware )
+            var passTo = pathString + '\\' + exeString;
+            if (!System.IO.File.Exists(passTo))
             {
-                SetForegroundWindow(_progerWindow.Handle);//  ShowWindow(progerWindow.Handle, SW_SHOW);
+                MessageBox.Show($@"File: '{passTo}' not found!", @"Incorrect Tool Path", MessageBoxButtons.OK);
+                return;
+            }
+
+            if (_progerWindow is {HasExited: false} && _progerWindow.ProcessName != "" && passTo == _progerWindowSoftware )
+            {
+                ActivateApp(_progerWindow);
             }
             else
             {
-                _progerWindow = Process.Start(passTo); //? 
+                var processName = string.IsNullOrEmpty(processString)
+                    ? string.IsNullOrEmpty(progString)
+                        ? justFileName : progString
+                    : processString;
+                if (!string.IsNullOrEmpty(processName))
+                { 
+                    var ps = Process.GetProcessesByName(processName);
+                    if (ps.Length > 0)
+                    {
+                        _progerWindow = ps[0];
+                        ActivateApp(_progerWindow);
+                        return;
+                    }
+                }
+                _progerWindow = Process.Start(passTo); //* ? 
                 _progerWindowSoftware = passTo;
             }
         }
@@ -345,7 +387,7 @@ namespace HPLStudio
             var vars = new KeyValList.KeyValList();
             var source = TextEditor.Lines.ToList();
             var result =  Preprocessor.Compile(ref source, out var dest, ref vars);
-            if (result == null || result.errorCode == ErrorRec.ErrCodes.EcOk)
+            if (result == null || result.Code == ErrorRec.ErrCodes.EcOk)
             {
                 var workDir = System.IO.Path.GetDirectoryName(FileName);
                 var justFileName = System.IO.Path.GetFileNameWithoutExtension(FileName);
@@ -580,14 +622,20 @@ namespace HPLStudio
             }
         }
 
+        private static readonly Regex StructsRe = new Regex(@"#struct\s*(\w+)\s*=\s*@?\w+(.*?)#ends",
+            RegexOptions.Singleline | RegexOptions.Compiled);
+
+        private static Mutex _structReMutex = new Mutex();
         private static void AddStructsToAutoComplete(string text, List<AutocompleteItem> items)
         {
-            var defsRe = new Regex(@"(#struct\s*(\w*)\s*=\s*(@?\w*))((\s*(\w+)\s*=?\d*\s)+)(#ends)", RegexOptions.Singleline);
-            foreach (Match def in defsRe.Matches(text))
+            //var defsRe = new Regex(@"(#struct\s*(\w*)\s*=\s*(@?\w*))((\s*(\w+)\s*=?\d*\s)+)(#ends)", RegexOptions.Singleline);
+
+            _structReMutex.WaitOne(100);
+            foreach (Match def in StructsRe.Matches(text))
             {
                 try
                 {
-                    var s = def?.Groups[2].Value;
+                    var s = def?.Groups[1].Value;
                     if (!items.Exists(x => x.Text == s))
                     {
                         items.Add(new AutocompleteItem(s));
@@ -607,9 +655,9 @@ namespace HPLStudio
                 }
                 catch
                 {
-
                 }
             }
+            _structReMutex.ReleaseMutex();
         }
 
 
@@ -646,6 +694,60 @@ namespace HPLStudio
             }
         }
 
+        private void changeHotKeysButton_Click(object sender, EventArgs e)
+        {
+            if (defaultHotkeysMapping is null && TextEditor is null) return;
+            var mapping = defaultHotkeysMapping ?? TextEditor.HotkeysMapping;
+
+            var form = new HotkeysEditorForm(mapping);
+            if (form.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                foreach (FATabStripItem item in tsFiles.Items)
+                {
+                    if (item?.Controls[0] is FastColoredTextBox tb)
+                    {
+                        tb.HotkeysMapping = form.GetHotkeys();
+                    }
+                }
+                defaultHotkeysMapping = form.GetHotkeys();
+            }
+        }
+
+
+        private static Regex uncommentRe = new Regex(@"(\n\s*(;))", RegexOptions.Compiled | RegexOptions.Singleline);
+
+        private void fctb_CommentAction(object sender, CustomActionEventArgs e)
+        {
+            switch (e.Action)
+            {
+                case FCTBAction.CustomAction1: /*comment*/
+                    if (TextEditor is { } tb)
+                    {
+                        var store = new Range(tb, tb.Selection.Start, tb.Selection.End);
+                        if (tb.SelectedText == "")
+                            tb.Selection = new Range(tb, tb.Selection.Start.iLine);
+                        var s = $"\n{tb.SelectedText}";
+                        s =  s.Replace("\n", $"\n;")
+                            .Remove(0, 1);
+                        tb.SelectedText = s.Remove(s.Length-1);
+                        tb.Selection = store;
+                        tb.DoSelectionVisible();
+                    }
+                    break;
+                case FCTBAction.CustomAction2: /*uncomment*/
+                    if (TextEditor is { } te)
+                    {
+                        var store = new Range(te, te.Selection.Start, te.Selection.End);
+                        if (te.SelectedText == "")
+                            te.Selection = new Range(te, te.Selection.Start.iLine);
+                        var s = uncommentRe.Replace($"\n{te.SelectedText}",
+                            match => match.Value.Remove(match.Value.Length - 1));
+                        te.SelectedText = s.Remove(0,1);
+                        te.Selection = store;
+                    }
+                    break;
+            }
+        }
 
     }
 }
