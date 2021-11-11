@@ -622,6 +622,27 @@ namespace HPLStudio
             }
         }
 
+        private static void AddMacroToAutoComplete(string text, List<AutocompleteItem> items)
+        {
+            var macroRe = new Regex(@"^#macro\s*(.*)\s*$", RegexOptions.Multiline);
+            foreach (Match macro in macroRe.Matches(text))
+            {
+                try
+                {
+                    var s = macro.Groups[1].Value;
+                    if (!items.Exists(x => x.Text == s))
+                    {
+                        items.Add(new AutocompleteItem(s));
+                    }
+                }
+                catch
+                {
+
+                }
+            }
+        }
+
+
         private static readonly Regex StructsRe = new Regex(@"#struct\s*(\w+)\s*=\s*@?\w+(.*?)#ends",
             RegexOptions.Singleline | RegexOptions.Compiled);
 
@@ -674,6 +695,7 @@ namespace HPLStudio
                 AddArraysToAutoComplete(text, items);
                 AddDefsToAutoComplete(text, items);
                 AddStructsToAutoComplete(text, items);
+                AddMacroToAutoComplete(text, items);
 
                 tb.Invoke( new Action<TbInfo>( tbi => tbi.popupMenu.Items.SetAutocompleteItems(items)), (tb.Tag as TbInfo));
                 //set as autocomplete source                
