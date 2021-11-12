@@ -234,6 +234,7 @@
             // ToolStrip1
             // 
             this.ToolStrip1.GripStyle = System.Windows.Forms.ToolStripGripStyle.Hidden;
+            this.ToolStrip1.ImageScalingSize = new System.Drawing.Size(32, 32);
             this.ToolStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.NewButton1,
             this.OpenButton1,
@@ -247,84 +248,84 @@
             this.changeHotKeysButton});
             this.ToolStrip1.Location = new System.Drawing.Point(0, 24);
             this.ToolStrip1.Name = "ToolStrip1";
-            this.ToolStrip1.Size = new System.Drawing.Size(746, 25);
+            this.ToolStrip1.Size = new System.Drawing.Size(746, 39);
             this.ToolStrip1.TabIndex = 4;
             this.ToolStrip1.Text = "toolStrip1";
             // 
             // NewButton1
             // 
             this.NewButton1.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-            this.NewButton1.Image = ((System.Drawing.Image)(resources.GetObject("NewButton1.Image")));
+            this.NewButton1.Image = global::HPLStudio.Properties.Resources.icons8_new_copy_321;
             this.NewButton1.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.NewButton1.Name = "NewButton1";
-            this.NewButton1.Size = new System.Drawing.Size(23, 22);
+            this.NewButton1.Size = new System.Drawing.Size(36, 36);
             this.NewButton1.Text = "Новый";
             this.NewButton1.Click += new System.EventHandler(this.newFileMenuItem_Click);
             // 
             // OpenButton1
             // 
             this.OpenButton1.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-            this.OpenButton1.Image = ((System.Drawing.Image)(resources.GetObject("OpenButton1.Image")));
+            this.OpenButton1.Image = global::HPLStudio.Properties.Resources.icons8_opened_folder_32;
             this.OpenButton1.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.OpenButton1.Name = "OpenButton1";
-            this.OpenButton1.Size = new System.Drawing.Size(23, 22);
+            this.OpenButton1.Size = new System.Drawing.Size(36, 36);
             this.OpenButton1.Text = "Открыть";
             this.OpenButton1.Click += new System.EventHandler(this.openFileMenuItem_Click);
             // 
             // SaveButton1
             // 
             this.SaveButton1.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-            this.SaveButton1.Image = ((System.Drawing.Image)(resources.GetObject("SaveButton1.Image")));
+            this.SaveButton1.Image = global::HPLStudio.Properties.Resources.icons8_save_32;
             this.SaveButton1.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.SaveButton1.Name = "SaveButton1";
-            this.SaveButton1.Size = new System.Drawing.Size(23, 22);
+            this.SaveButton1.Size = new System.Drawing.Size(36, 36);
             this.SaveButton1.Text = "Сохранить";
             this.SaveButton1.Click += new System.EventHandler(this.saveMenuItem_Click);
             // 
             // toolStripSeparator1
             // 
             this.toolStripSeparator1.Name = "toolStripSeparator1";
-            this.toolStripSeparator1.Size = new System.Drawing.Size(6, 25);
+            this.toolStripSeparator1.Size = new System.Drawing.Size(6, 39);
             // 
             // printButton1
             // 
             this.printButton1.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-            this.printButton1.Image = ((System.Drawing.Image)(resources.GetObject("printButton1.Image")));
+            this.printButton1.Image = global::HPLStudio.Properties.Resources.icons8_print_32;
             this.printButton1.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.printButton1.Name = "printButton1";
-            this.printButton1.Size = new System.Drawing.Size(23, 22);
+            this.printButton1.Size = new System.Drawing.Size(36, 36);
             this.printButton1.Text = "Печать";
             this.printButton1.Click += new System.EventHandler(this.printMenuItem_Click);
             // 
             // toolStripSeparator2
             // 
             this.toolStripSeparator2.Name = "toolStripSeparator2";
-            this.toolStripSeparator2.Size = new System.Drawing.Size(6, 25);
+            this.toolStripSeparator2.Size = new System.Drawing.Size(6, 39);
             // 
             // CompileButton1
             // 
             this.CompileButton1.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-            this.CompileButton1.Image = global::HPLStudio.Properties.Resources.icons8_system_information_32;
+            this.CompileButton1.Image = global::HPLStudio.Properties.Resources.icons8_approval_32;
             this.CompileButton1.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.CompileButton1.Name = "CompileButton1";
-            this.CompileButton1.Size = new System.Drawing.Size(23, 22);
+            this.CompileButton1.Size = new System.Drawing.Size(36, 36);
             this.CompileButton1.Text = "Собрать";
             this.CompileButton1.Click += new System.EventHandler(this.PreprocessorMenuItem_Click);
             // 
             // toPassInButton1
             // 
             this.toPassInButton1.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-            this.toPassInButton1.Image = global::HPLStudio.Properties.Resources.icons8_next_32;
+            this.toPassInButton1.Image = global::HPLStudio.Properties.Resources.icons8_next_321;
             this.toPassInButton1.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.toPassInButton1.Name = "toPassInButton1";
-            this.toPassInButton1.Size = new System.Drawing.Size(23, 22);
+            this.toPassInButton1.Size = new System.Drawing.Size(36, 36);
             this.toPassInButton1.Text = "Передать в";
             this.toPassInButton1.Click += new System.EventHandler(this.ToPassToMenuItem_Click);
             // 
             // toolStripSeparator3
             // 
             this.toolStripSeparator3.Name = "toolStripSeparator3";
-            this.toolStripSeparator3.Size = new System.Drawing.Size(6, 25);
+            this.toolStripSeparator3.Size = new System.Drawing.Size(6, 39);
             // 
             // changeHotKeysButton
             // 
@@ -332,7 +333,7 @@
             this.changeHotKeysButton.Image = global::HPLStudio.Properties.Resources.icons8_keyboard_32;
             this.changeHotKeysButton.ImageTransparentColor = System.Drawing.Color.Magenta;
             this.changeHotKeysButton.Name = "changeHotKeysButton";
-            this.changeHotKeysButton.Size = new System.Drawing.Size(23, 22);
+            this.changeHotKeysButton.Size = new System.Drawing.Size(36, 36);
             this.changeHotKeysButton.Text = "toolStripButton1";
             this.changeHotKeysButton.ToolTipText = "Настройка горячих клавиш";
             this.changeHotKeysButton.Click += new System.EventHandler(this.changeHotKeysButton_Click);
@@ -345,10 +346,10 @@
             // 
             this.tsFiles.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tsFiles.Font = new System.Drawing.Font("Tahoma", 8.25F);
-            this.tsFiles.Location = new System.Drawing.Point(0, 49);
+            this.tsFiles.Location = new System.Drawing.Point(0, 63);
             this.tsFiles.Name = "tsFiles";
             this.tsFiles.SelectedItem = this.faTabStripItem1;
-            this.tsFiles.Size = new System.Drawing.Size(746, 476);
+            this.tsFiles.Size = new System.Drawing.Size(746, 462);
             this.tsFiles.TabIndex = 5;
             this.tsFiles.Text = "faTabStrip1";
             this.tsFiles.TabStripItemClosing += new FarsiLibrary.Win.TabStripItemClosingHandler(this.tsFiles_TabStripItemClosing);

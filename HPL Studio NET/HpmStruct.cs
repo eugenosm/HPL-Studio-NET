@@ -19,17 +19,17 @@ namespace HPLStudio
                 var getterName = $"_get_{x.Groups[5].Value}";
                 var getter = Preprocessor.macros[getterName];
                 var arg = x.Groups[2].Value;
-                return getter.Apply($" {getterName}({arg}) ");
+                return getter.Apply($"{getterName}({arg})");
             }
 
             if (x.Groups[6].Success)
             {
-                var setterName = $"_get_{x.Groups[8].Value}";
+                var setterName = $"_set_{x.Groups[8].Value}";
                 var setter = Preprocessor.macros[setterName];
                 var arg = x.Groups[9].Value;
-                return arg.StartsWith("R")  // TODO: заменить на регулярку, проверяем что это регистр
-                    ? setter.Apply($" {setterName}({arg}) ")
-                    : $"R0={arg},{setter.Apply($" {setterName}(R0) ")}";
+                return arg == "R0"  
+                    ? setter.Apply($"R1=R0,{setterName}(R1)")
+                    : $"{setter.Apply($"{setterName}({arg})")}";
             }
             return x.Value;
         }
@@ -274,9 +274,9 @@ namespace HPLStudio
 
         private string _generateGetArrStructField1Byte()
             => (_shift == 0) ? ((byte)mask == 255)
-                    ? $"{Tr0}={identifier}[{_idx}]"
-                    : $"{Tr0}={identifier}[{_idx}], {Tr0}=&0x{(byte)mask:X}"
-                : $"{Tr0}={identifier}[{_idx}], {Tr0}=&0x{(byte)mask:X}, {Tr0}=>>{_shift}";
+                    ? $" dst={identifier}[{_idx}]"
+                    : $" dst={identifier}[{_idx}], dst=&0x{(byte)mask:X}"
+                : $" dst={identifier}[{_idx}], dst=&0x{(byte)mask:X}, dst=>>{_shift}";
 
         private string _generateGetArrStructField()
         {
@@ -286,9 +286,9 @@ namespace HPLStudio
                 mask >>= 8;
                 if ((mask & 0xFFFFFFFF) == 0) break;
                 if ((byte)mask == 255)
-                    r += $", {Tr1}={identifier}[{_idx + i}], {Tr1}=<<{i * 8 - _shift}, {Tr0}=|{Tr1}";
+                    r += $", {Tr1}={identifier}[{_idx + i}], {Tr1}=<<{i * 8 - _shift}, dst=|{Tr1}";
                 else
-                    r += $", {Tr1}={identifier}[{_idx + i}], {Tr1}=&0x{((byte)mask):X}, {Tr1}=<<{i * 8 - _shift}, {Tr0}=|{Tr1}";
+                    r += $", {Tr1}={identifier}[{_idx + i}], {Tr1}=&0x{((byte)mask):X}, dst=<<{i * 8 - _shift}, dst=|{Tr1}";
             }
 
             return r;

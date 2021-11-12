@@ -31,21 +31,21 @@ namespace HPLStudio
             try
             {
                 var name = macrodef.Groups[1].Value;
-                if (macrodef.Groups.Count < 3)
+                if (!macrodef.Groups[2].Success) // macro with no args
                 {
-                    return (name, new Regex(@$"\W({name})\W", RegexOptions.Singleline | RegexOptions.Compiled), 
+                    return (name, new Regex(@$"(\b{name}\b)", RegexOptions.Singleline | RegexOptions.Compiled), 
                         new List<Regex>(0));
                 }
 
                 var args = macrodef.Groups[3].Value.Split(',')
                     .Select(x => new Regex(
-                            @$"\W({x.Trim()})\W", 
+                            $@"(\b{x.Trim()}\b)",//@$"(^|\W)({x.Trim()})(\W|$)", 
                             RegexOptions.Singleline | RegexOptions.Compiled)).ToList();
 
                 var defArgs = args.Select( x => @"(@?[\w]+)");
                 var defArgStr = string.Join(@"\s*,\s*", defArgs);
 
-                var macroCallMatchStr = $@"\W({name}\(\s*{defArgStr}\s*\))\W";
+                var macroCallMatchStr = @$"(\b{name}\(\s*{defArgStr}\s*\))";
                 return (name, new Regex(macroCallMatchStr, RegexOptions.Singleline | RegexOptions.Compiled), args);
             }
             catch
@@ -66,6 +66,10 @@ namespace HPLStudio
             };
         }
 
+        public string Evaluator(Match x, Match macroMatch, int i )
+        {
+            return $"{macroMatch.Groups[i].Value}";
+        }
 
         public string GenerateReplaceCode(Match macroMatch)
         {
@@ -74,15 +78,17 @@ namespace HPLStudio
             var r = s;
             foreach (var regex in ArgsMatch)
             {
-                r = regex.Replace(r, x => $"{x.Value[0]}{macroMatch.Groups[i].Value}{x.Value.Last()}");
+                r = regex.Replace(r, x => Evaluator(x, macroMatch, i));
                 i++;
             }
 
-            return $"{macroMatch.Value[0]}{r}{macroMatch.Value.Last()}";
+            return r;
+            //return $"{macroMatch.Groups[1].Value}{r}{macroMatch.Groups[macroMatch.Groups.Count - 1].Value}";
         }
 
         public string Apply(string source)
         {
+
             return Match.Replace(source, GenerateReplaceCode);
         }
 
