@@ -27,9 +27,10 @@ namespace HPLStudio
                 var setterName = $"_set_{x.Groups[8].Value}";
                 var setter = Preprocessor.macros[setterName];
                 var arg = x.Groups[9].Value;
+                //var cmt = $"; {x.Groups[8].Value} = {arg}\n";
                 return arg == "R0"  
                     ? setter.Apply($"R1=R0,{setterName}(R1)")
-                    : $"{setter.Apply($"{setterName}({arg})")}";
+                    : setter.Apply($"{setterName}({arg})");
             }
             return x.Value;
         }
@@ -98,17 +99,6 @@ namespace HPLStudio
                                     return new ErrorRec(ErrorRec.ErrCodes.EcErrorInParameters, srcLine, "");
                                 }
                                 structFuncs.Add(";---------------------------");
-                                /*
-                                var funcName = $"[_set_{identifierHead}_{aStructFieldName}]";
-
-                                if (funcName.Length > 22)
-                                {
-                                    return new ErrorRec(ErrorRec.ErrCodes.EcErrorInSectionName, srcLine, "")
-                                    {
-                                        Info = $"_set_{identifierHead}_{aStructFieldName}"
-                                    };
-                                }
-                                */
                                 var macroName = $"_set_{identifierHead}_{aStructFieldName}";
                                 //structFuncs.Add(funcName);
                                 //structFuncs.Add(";R0 - value");//  ;$VALUE - value, or use as parameter
@@ -186,7 +176,7 @@ namespace HPLStudio
                     {
                         return result;
                     }
-                    Preprocessor.AddPreCompiledLines(ref structFuncs, ref strFuncAdd, ref dest, ref vars);
+                    //Preprocessor.AddPreCompiledLines(ref structFuncs, ref strFuncAdd, ref dest, ref vars);
                     structFuncs.Clear();
                 }
                 else

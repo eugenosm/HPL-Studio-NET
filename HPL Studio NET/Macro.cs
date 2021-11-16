@@ -21,11 +21,13 @@ namespace HPLStudio
         private static Regex MacroDefRe = new Regex(@"^#macro\s+(\w+)(\(([\w,\s]+)\))?",
             RegexOptions.Multiline | RegexOptions.Compiled);
 
+        private static string ArgPattern = @"(@?[\w\{\$\}]+)";
+
         /// <summary>
         /// Возвращает параметры макроса из Match его определения
         /// </summary>
         /// <param name="macrodef">Match от MacroDefRe</param>
-        /// <returns>(string Name, Regex MacroMatch, List&lt;REgex&gt; ArgsMatch </returns>
+        /// <returns>(string Name, Regex MacroMatch, List&lt;Regex&gt; ArgsMatch </returns>
         public static (string, Regex, List<Regex>) GenerateMacroProperties(Match macrodef)
         {//(test\((@?[\w]+),\s?(@?[\w]+),\s?(@?[\w]+)\))
             try
@@ -42,7 +44,7 @@ namespace HPLStudio
                             $@"(\b{x.Trim()}\b)",//@$"(^|\W)({x.Trim()})(\W|$)", 
                             RegexOptions.Singleline | RegexOptions.Compiled)).ToList();
 
-                var defArgs = args.Select( x => @"(@?[\w]+)");
+                var defArgs = args.Select( x => ArgPattern);
                 var defArgStr = string.Join(@"\s*,\s*", defArgs);
 
                 var macroCallMatchStr = @$"(\b{name}\(\s*{defArgStr}\s*\))";

@@ -94,7 +94,7 @@ namespace HPLStudio
         private static ErrorRec DoDef(ref List<string> source, ref List<string> dest, ref KeyValList.KeyValList vars
             , ref int i, ref string trimLine)
         {
-            var parsedLine = trimLine.Substring(4).Split('=');
+            var parsedLine = trimLine.Substring(4).Split(new []{ '=' }, 2);
             if (parsedLine.Length < 2)
             {
                 return new ErrorRec(ErrorRec.ErrCodes.EcErrorInDefineExpression, i, "");
@@ -434,67 +434,13 @@ namespace HPLStudio
             {
                 if(kv.Key == kv.Value) continue;
 
-                var re = new Regex($@"\W{Regex.Escape(kv.Key)}\W", RegexOptions.Compiled | RegexOptions.Singleline);
-                implementation = re.Replace(implementation, x => $"{x.Value[0]}{kv.Value}{x.Value.Last()}");
+                var re = new Regex($@"\b{Regex.Escape(kv.Key)}\b", RegexOptions.Compiled | RegexOptions.Singleline);
+                implementation = re.Replace(implementation, x => kv.Value);
             }
 
             implementation = HpmStruct.ApplyGetterSetter(implementation);
             implementation = RestoreComments(implementation, commentsStorage);
             destBuf.AddRange(implementation.Split(new string[] { Environment.NewLine }, StringSplitOptions.None));
-
-
-            /*
-             source = defs.ToList();
-             source.AddRange(implementation.Split(new string[]{Environment.NewLine}, StringSplitOptions.RemoveEmptyEntries));
-
-             var reservedNames = ExtractFuncDefs(source, codeStart, ref vars);
-
-             for (var i = codeStart; i < source.Count; i++)
-             {
-                 var line = source[i];
-                 var trimLine = CleanLine(line);
-                 if (string.IsNullOrEmpty(trimLine))
-                 {
-                     destBuf.Add(line);
-                     continue;
-                 }
-                 var origTrimLine = trimLine;
-
-                 foreach (var kv in vars.List)
-                 {
-                     if (kv.Key == kv.Value && !reservedNames.Contains(kv.Key))
-                     {
-                         reservedNames.Add(kv.Key);
-                     }
-                     else
-                     {
-                         if (trimLine.Contains(kv.Key))
-                         {
-                             var reserved = reservedNames.FindAll(x => x.Contains(kv.Key) && trimLine.Contains(x));
-                             if (reserved?.Count > 0)
-                             {
-
-                                 for (var ri = 0; ri < reserved.Count; ri++)
-                                 {
-                                     trimLine = trimLine.Replace(reserved[ri], $"<##{ri}##>");
-                                 }
-                                 trimLine = trimLine.Replace(kv.Key, kv.Value);
-                                 for (var ri = reserved.Count - 1; ri >= 0; ri--)
-                                 {
-                                     trimLine = trimLine.Replace($"<##{ri}##>", reserved[ri]);
-                                 }
-                             }
-                             else
-                                 trimLine = trimLine.Replace(kv.Key, kv.Value);
-                         }
-                     }
-                 }
-                 if( origTrimLine != trimLine)
-                     line = line.Replace(origTrimLine, trimLine);
-                 line = HpmStruct.ApplyGetterSetter(line);
-                 destBuf.AddRange(line.Split(new string[] { Environment.NewLine }, StringSplitOptions.None));
-             }
-            */
 
             RestoreStrings(ref source, savedStrings);
             RestoreStrings(ref destBuf, savedStrings);
