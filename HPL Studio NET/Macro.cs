@@ -18,10 +18,10 @@ namespace HPLStudio
         public List<Regex> ArgsMatch { get; set; }
         public string Body { get; set; }
 
-        private static Regex MacroDefRe = new Regex(@"^#macro\s+(\w+)(\(([\w,\s]+)\))?",
+        private static Regex MacroDefRe = new Regex(@"^#macro\s+(\w+)(\(([\w,\s\{\$\}\#]+)\))?",
             RegexOptions.Multiline | RegexOptions.Compiled);
 
-        private static string ArgPattern = @"(@?[\w\{\$\}]+)";
+        private static string ArgPattern = @"(@?[\w\{\$\}\s\#]+)";
 
         /// <summary>
         /// Возвращает параметры макроса из Match его определения

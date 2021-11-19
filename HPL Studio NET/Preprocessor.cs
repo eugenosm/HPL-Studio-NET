@@ -124,7 +124,7 @@ namespace HPLStudio
 
             var body = new List<string>();
             dest.Add($";{header}");
-            while (trimLine.IndexOf("#endm", StringComparison.Ordinal) != 0)
+            while (i < source.Count && trimLine.IndexOf("#endm", StringComparison.Ordinal) != 0)
             {
                 i++;
                 var line = source[i];

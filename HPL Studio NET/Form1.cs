@@ -78,7 +78,12 @@ namespace HPLStudio
 
         private void OpenFile(string fileName)
         {
-            if (tsFiles.Items.DrawnCount == 0)
+            if (FindFileTab(fileName) is {} tab)
+            {
+                tsFiles.SelectedItem = tab;
+                TextEditor.Focus();
+            }
+            else
             {
                 CreateTab(fileName);
             }
@@ -122,7 +127,7 @@ namespace HPLStudio
             try
             {
 
-                var tb = new FastColoredTextBox();
+                var tb = new FastColoredTextBox(){AutoIndentChars = false};
                 tb.Font = new Font("Consolas", 9.75f);
                 tb.ForeColor = _paletteWindowsTextColor;
                 var ext = System.IO.Path.GetExtension(fileName);
