@@ -84,6 +84,7 @@
     <Compile Include="HpmStruct.cs" />
     <Compile Include="IniFile.cs" />
     <Compile Include="KeyValList.cs" />
+    <Compile Include="Macro.cs" />
     <Compile Include="Preprocessor.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -159,6 +160,12 @@
     <Content Include="hpm.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <None Include="images\icons8-opened-folder-32.png" />
+    <None Include="images\icons8-new-copy-32.png" />
+    <None Include="images\icons8-save-32.png" />
+    <None Include="images\icons8-print-32.png" />
+    <None Include="images\icons8-approval-32.png" />
+    <None Include="images\icons8-next-32.png" />
     <Content Include="omega.ico" />
     <None Include="Resources\icons8-keyboard-32.png" />
     <None Include="Resources\icons8-system-information-32.png" />
@@ -170,7 +177,7 @@
   </PropertyGroup>
   <ProjectExtensions>
     <VisualStudio>
-      <UserProperties BuildVersion_AssemblyInfoFilename="Properties\AssemblyInfo.cs" BuildVersion_BuildVersioningStyle="None.None.Increment.Increment" />
+      <UserProperties BuildVersion_BuildVersioningStyle="None.None.Increment.Increment" BuildVersion_AssemblyInfoFilename="Properties\AssemblyInfo.cs" />
     </VisualStudio>
   </ProjectExtensions>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

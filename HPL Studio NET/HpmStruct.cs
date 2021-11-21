@@ -8,19 +8,36 @@ namespace HPLStudio
 
     internal class HpmStruct
     {
-        public const string GetSetRe = 
-            @"((@?\w+)(\[\w+\])?\s*=\s*@\w+(\{_get_set\((\w+)\)\}))|(@\w+(\{_get_set\((\w+)\)\})\s*=\s*(@?\w+)(\[\w+\])?)";
+        public static Regex GetSetRe = new Regex(
+            @"((@?\w+)(\[\w+\])?\s*=\s*@\w+(\{_get_set\((\w+)\)\}))|(@\w+(\{_get_set\((\w+)\)\})\s*=\s*(@?\w+)(\[\w+\])?)"
+            , RegexOptions.Singleline | RegexOptions.Compiled);
+
+        private static string GetSetEvaluator(Match x)
+        {
+            if (x.Groups[1].Success)
+            {
+                var getterName = $"_get_{x.Groups[5].Value}";
+                var getter = Preprocessor.macros[getterName];
+                var arg = x.Groups[2].Value;
+                return getter.Apply($"{getterName}({arg})");
+            }
+
+            if (x.Groups[6].Success)
+            {
+                var setterName = $"_set_{x.Groups[8].Value}";
+                var setter = Preprocessor.macros[setterName];
+                var arg = x.Groups[9].Value;
+                //var cmt = $"; {x.Groups[8].Value} = {arg}\n";
+                return arg == "R0"  
+                    ? setter.Apply($"R1=R0,{setterName}(R1)")
+                    : setter.Apply($"{setterName}({arg})");
+            }
+            return x.Value;
+        }
 
         public static string ApplyGetterSetter(string source)
         {
-            return Regex.Replace(source, GetSetRe, new MatchEvaluator(x =>
-            {
-                if (x.Groups[1].Success)
-                    return (x.Groups[2].Value == "R0") 
-                        ? $"_get_{x.Groups[5].Value}" 
-                        : $"_get_{x.Groups[5].Value}, {x.Groups[2].Value}=R0";
-                return x.Groups[6].Success ? $"_set_{x.Groups[8].Value}({x.Groups[9].Value})" : x.Value;
-            }));
+            return GetSetRe.Replace(source, GetSetEvaluator);
         }
 
         public static ErrorRec DoStruct(ref List<string> source, ref List<string> dest, ref KeyValList.KeyValList vars
@@ -82,28 +99,27 @@ namespace HPLStudio
                                     return new ErrorRec(ErrorRec.ErrCodes.EcErrorInParameters, srcLine, "");
                                 }
                                 structFuncs.Add(";---------------------------");
-                                var funcName = $"[_set_{identifierHead}_{aStructFieldName}]";
+                                var macroName = $"_set_{identifierHead}_{aStructFieldName}";
+                                //structFuncs.Add(funcName);
+                                //structFuncs.Add(";R0 - value");//  ;$VALUE - value, or use as parameter
+                                structFuncs.Add($"#macro {macroName}(arg)");
 
-                                if (funcName.Length > 22)
-                                {
-                                    return new ErrorRec(ErrorRec.ErrCodes.EcErrorInSectionName, srcLine, "")
-                                    {
-                                        Info = $"_set_{identifierHead}_{aStructFieldName}"
-                                    };
-                                }
-                                structFuncs.Add(funcName);
-                                structFuncs.Add(";R0 - value");//  ;$VALUE - value, or use as parameter
-                                
                                 var field = (isArray)
-                                    ? new ArrStructField(identifierHead, bitPos, fieldSize)
-                                    : new StructField(identifierHead, bitPos, fieldSize);
+                                    ? new ArrStructField(valueHeader, bitPos, fieldSize)
+                                    : new StructField(valueHeader, bitPos, fieldSize);
 
                                 structFuncs.Add(field.Setter);
+                                structFuncs.Add("#endm");
                                 structFuncs.Add(";---------------------------");
-                                value = $"[_get_{identifierHead}_{aStructFieldName}]";
-                                structFuncs.Add(value);
-                                structFuncs.Add(";R0 - result");//  ;$VALUE - result
+                                // value = $"[_get_{identifierHead}_{aStructFieldName}]";
+                                // structFuncs.Add(value);
+                                macroName = $"_get_{identifierHead}_{aStructFieldName}";
+                                structFuncs.Add($"#macro {macroName}(dst)");
+                                //structFuncs.Add(";R0 - result");//  ;$VALUE - result
                                 structFuncs.Add(field.Getter);
+                                structFuncs.Add("#endm");
+                                structFuncs.Add(";---------------------------");
+
                                 value = $"{{_get_set({identifierHead}_{aStructFieldName})}}";
                                 Preprocessor.PushDef(ref vars, value, value);
                                 bitPos += fieldSize;
@@ -123,7 +139,10 @@ namespace HPLStudio
                             }
                             else
                             {
-                                return new ErrorRec(ErrorRec.ErrCodes.EcErrorIdentifierAlreadyDefined, srcLine, "");
+                                return new ErrorRec(ErrorRec.ErrCodes.EcErrorIdentifierAlreadyDefined, srcLine, "")
+                                {
+                                    Info = identifier
+                                };
                             }
 
                             if (!isArray)
@@ -157,7 +176,7 @@ namespace HPLStudio
                     {
                         return result;
                     }
-                    Preprocessor.AddPreCompiledLines(ref structFuncs, ref strFuncAdd, ref dest, ref vars);
+                    //Preprocessor.AddPreCompiledLines(ref structFuncs, ref strFuncAdd, ref dest, ref vars);
                     structFuncs.Clear();
                 }
                 else
@@ -167,7 +186,11 @@ namespace HPLStudio
             }
             else
             {
-                return new ErrorRec(ErrorRec.ErrCodes.EcErrorIdentifierAlreadyDefined, srcLine, "");
+                return new ErrorRec(ErrorRec.ErrCodes.EcErrorIdentifierAlreadyDefined, srcLine, "")
+                {
+                    Info = identifierHead
+                };
+                
             }
             return new ErrorRec();
         }
@@ -206,16 +229,16 @@ namespace HPLStudio
         private string _generateGetStructField()
         {
             return offset > 0
-                ? $"R0={identifier}, R0=&0x{mask:X}, R0=>>0x{offset:X}"
-                : $"R0={identifier}, R0=&0x{mask:X}";
+                ? $"dst={identifier}, dst=&0x{mask:X}, dst=>>0x{offset:X}"
+                : $"dst={identifier}, dst=&0x{mask:X}";
 
         }
 
         private string _generateSetStructField()
         {
             return offset > 0
-                ? $"{identifier}=&0x{(~mask):X}, R0=<<0x{offset:X}, R0=&0x{mask:X}, {identifier}=|R"
-                : $"{identifier}=&0x{(~mask):X}, R0=&0x{mask:X}, {identifier}=|R0";
+                ? $"{identifier}=&0x{(~mask):X}, R0=arg, R0=<<0x{offset:X}, R0=&0x{mask:X}, {identifier}=|R0"
+                : $"{identifier}=&0x{(~mask):X}, R0=arg, R0=&0x{mask:X}, {identifier}=|R0";
         }
 
 
@@ -241,9 +264,9 @@ namespace HPLStudio
 
         private string _generateGetArrStructField1Byte()
             => (_shift == 0) ? ((byte)mask == 255)
-                    ? $"{Tr0}={identifier}[{_idx}]"
-                    : $"{Tr0}={identifier}[{_idx}], {Tr0}=&0x{(byte)mask:X}"
-                : $"{Tr0}={identifier}[{_idx}], {Tr0}=&0x{(byte)mask:X}, {Tr0}=>>{_shift}";
+                    ? $" dst={identifier}[{_idx}]"
+                    : $" dst={identifier}[{_idx}], dst=&0x{(byte)mask:X}"
+                : $" dst={identifier}[{_idx}], dst=&0x{(byte)mask:X}, dst=>>{_shift}";
 
         private string _generateGetArrStructField()
         {
@@ -253,9 +276,9 @@ namespace HPLStudio
                 mask >>= 8;
                 if ((mask & 0xFFFFFFFF) == 0) break;
                 if ((byte)mask == 255)
-                    r += $", {Tr1}={identifier}[{_idx + i}], {Tr1}=<<{i * 8 - _shift}, {Tr0}=|{Tr1}";
+                    r += $", {Tr1}={identifier}[{_idx + i}], {Tr1}=<<{i * 8 - _shift}, dst=|{Tr1}";
                 else
-                    r += $", {Tr1}={identifier}[{_idx + i}], {Tr1}=&0x{((byte)mask):X}, {Tr1}=<<{i * 8 - _shift}, {Tr0}=|{Tr1}";
+                    r += $", {Tr1}={identifier}[{_idx + i}], {Tr1}=&0x{((byte)mask):X}, dst=<<{i * 8 - _shift}, dst=|{Tr1}";
             }
 
             return r;
@@ -266,9 +289,9 @@ namespace HPLStudio
             var nMask = ~(mask);
             var r = (_shift == 0)
                 ? ((byte)mask == 255)
-                    ? new StringBuilder($"{identifier}[{_idx}]={Tr0}")
-                    : new StringBuilder($"{Tr1}={identifier}[{_idx}], {Tr1}=&0x{(byte)nMask:X}, {Tr1}=|{Tr0}, {identifier}[{_idx}]={Tr1}")
-                : new StringBuilder($"{Tr1}={identifier}[{_idx}], {Tr1}=&0x{(byte)nMask:X}, {Tr0}=<<{_shift}, {Tr1}=|{Tr0}, {identifier}[{_idx}]={Tr1}");
+                    ? new StringBuilder($"{identifier}[{_idx}]=arg")
+                    : new StringBuilder($"{Tr0}=arg, {Tr1}={identifier}[{_idx}], {Tr1}=&0x{(byte)nMask:X}, {Tr1}=|{Tr0}, {identifier}[{_idx}]={Tr1}")
+                : new StringBuilder($"{Tr0}=arg, {Tr1}={identifier}[{_idx}], {Tr1}=&0x{(byte)nMask:X}, {Tr0}=<<{_shift}, {Tr1}=|{Tr0}, {identifier}[{_idx}]={Tr1}");
             for (var i = 1; i < _byteCnt; i++)
             {
                 nMask >>= 8;

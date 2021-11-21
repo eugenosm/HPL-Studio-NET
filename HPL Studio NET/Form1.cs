@@ -17,6 +17,7 @@ using HPLStudio.Properties;
 
 namespace HPLStudio
 {
+
     public partial class Form1 : Form
     {
         //TODO: Добавить PIN, BUS к defined names, и в автоподстановку
@@ -77,7 +78,12 @@ namespace HPLStudio
 
         private void OpenFile(string fileName)
         {
-            if (tsFiles.Items.DrawnCount == 0)
+            if (FindFileTab(fileName) is {} tab)
+            {
+                tsFiles.SelectedItem = tab;
+                TextEditor.Focus();
+            }
+            else
             {
                 CreateTab(fileName);
             }
@@ -121,7 +127,7 @@ namespace HPLStudio
             try
             {
 
-                var tb = new FastColoredTextBox();
+                var tb = new FastColoredTextBox(){AutoIndentChars = false};
                 tb.Font = new Font("Consolas", 9.75f);
                 tb.ForeColor = _paletteWindowsTextColor;
                 var ext = System.IO.Path.GetExtension(fileName);
@@ -298,6 +304,13 @@ namespace HPLStudio
             defaultHotkeysMapping.InitDefault();
             defaultHotkeysMapping.Add(Keys.Control | Keys.OemSemicolon, FCTBAction.CustomAction1);
             defaultHotkeysMapping.Add(Keys.Control | Keys.OemSemicolon | Keys.Shift, FCTBAction.CustomAction2);
+            defaultHotkeysMapping.Add(Keys.Control | Keys.LButton, FCTBAction.CustomAction3);
+
+            var hk = iniFile.GetString("Hotkeys", "hotkeys", null);
+            if (!string.IsNullOrEmpty(hk))
+            {
+                defaultHotkeysMapping = HotkeysMapping.Parse(hk);
+            }
         }
 
         private System.Diagnostics.Process _progerWindow = null;
@@ -622,6 +635,27 @@ namespace HPLStudio
             }
         }
 
+        private static void AddMacroToAutoComplete(string text, List<AutocompleteItem> items)
+        {
+            var macroRe = new Regex(@"^#macro\s*(.*)\s*$", RegexOptions.Multiline);
+            foreach (Match macro in macroRe.Matches(text))
+            {
+                try
+                {
+                    var s = macro.Groups[1].Value;
+                    if (!items.Exists(x => x.Text == s))
+                    {
+                        items.Add(new AutocompleteItem(s));
+                    }
+                }
+                catch
+                {
+
+                }
+            }
+        }
+
+
         private static readonly Regex StructsRe = new Regex(@"#struct\s*(\w+)\s*=\s*@?\w+(.*?)#ends",
             RegexOptions.Singleline | RegexOptions.Compiled);
 
@@ -674,6 +708,7 @@ namespace HPLStudio
                 AddArraysToAutoComplete(text, items);
                 AddDefsToAutoComplete(text, items);
                 AddStructsToAutoComplete(text, items);
+                AddMacroToAutoComplete(text, items);
 
                 tb.Invoke( new Action<TbInfo>( tbi => tbi.popupMenu.Items.SetAutocompleteItems(items)), (tb.Tag as TbInfo));
                 //set as autocomplete source                
@@ -710,6 +745,7 @@ namespace HPLStudio
                     }
                 }
                 defaultHotkeysMapping = form.GetHotkeys();
+                iniFile.WriteValue("Hotkeys", "hotkeys", defaultHotkeysMapping.ToString());
             }
         }
 
@@ -746,8 +782,117 @@ namespace HPLStudio
                         te.Selection = store;
                     }
                     break;
+                case FCTBAction.CustomAction3: /*Go-to-declaration*/
+                    if (TextEditor is { } ed)
+                    {
+                        var p = ed.PointToPosition(ed.PointToClient(Cursor.Position));
+                        // display letter
+                        var word = GetWord(ed, p);
+                        GoToDeclaration(word);
+                    }
+                    break;
+
             }
         }
 
+        private readonly List<FCTBPlace> _positions = new();
+        private void PushGoTo(FCTBPlace from, int to)
+        {
+            _positions.Add(from);
+            GoToPosition(from.Editor, to);
+        }
+
+        private void PushGoTo(FCTBPlace from, FCTBPlace to)
+        {
+            _positions.Add(from);
+            GoToPosition(to);
+        }
+
+        private void PopGoTo()
+        {
+            if (_positions.Count == 0) return;
+            var to = _positions.Last();
+            GoToPosition(to);
+            _positions.RemoveAt(_positions.Count-1);
+        }
+        private void GoToPosition(FCTBPlace to)
+        {
+            foreach (FATabStripItem item in tsFiles.Items)
+            {
+                if (item?.Controls[0] is FastColoredTextBox tb && tb == to.Editor)
+                {
+                    tsFiles.SelectedItem = item;
+                    tb.Selection.Start = to.Position;
+                }
+            }
+        }
+
+        private void GoToPosition(FastColoredTextBox editor, int to)
+        {
+            foreach (FATabStripItem item in tsFiles.Items)
+            {
+                if (item?.Controls[0] is FastColoredTextBox tb && tb == editor)
+                {
+                    tsFiles.SelectedItem = item;
+                    tb.SelectionStart = to;
+                }
+            }
+        }
+
+        private void GoToDeclaration(string name)
+        {
+            var text = TextEditor.Text;
+            var patterns = new string[]
+            {
+                $@"\[{name}\]", $@"#macro\s{name}\b", $@"#struct\s{name}\b", $@"#def\s{name}\b"
+            };
+
+            int pos = -1;
+            foreach (var pattern in patterns)
+            {
+                var m = Regex.Match(TextEditor.Text, $@"#macro\s{name}");
+                if (m.Success)
+                {
+                    pos = m.Index;
+                    break;
+                }
+            }
+
+            if (pos >= 0)
+            {
+
+                PushGoTo(new FCTBPlace(){ Editor = TextEditor, Position = TextEditor.Selection.Start},
+                    new FCTBPlace(){Editor = TextEditor, Position = new Place()}
+                    );
+            }
+        }
+
+        private string GetWord(FastColoredTextBox ct, int p)
+        {
+            var sb = new StringBuilder(ct.Text);
+            if (sb.Length == 0 || p == sb.Length) return "";
+            if (!Regex.IsMatch(sb[p].ToString(), @"^\w$")) return sb[p].ToString();
+            var n1 = p;
+            while (n1 > 0 && Regex.IsMatch(sb[n1 - 1].ToString(), @"^\w$"))
+            {
+                n1 -= 1;
+            }
+            var n2 = p;
+            while (n2 < sb.Length && Regex.IsMatch(sb[n2 + 1].ToString(), @"^\w$"))
+            {
+                n2 += 1;
+            }
+
+            return sb.ToString().Substring(n1, n2 - n1 + 1);
+        }
+
     }
+
+    public struct FCTBPlace
+    {
+        public FastColoredTextBox Editor;
+        public Place Position;
+    }
+
+
 }

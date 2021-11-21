@@ -34,7 +34,7 @@ namespace HPLStudio
             FileName = file;
             Info = null;
         }
-        public static string ErrorTextByCode(ErrCodes code)
+        private static string ErrorTextByCode(ErrCodes code)
         {
             return code switch
             {
@@ -62,6 +62,7 @@ namespace HPLStudio
 
     internal class Preprocessor
     {
+        public static Dictionary<string, Macro> macros = new();
         public const string SectionRegex = "^\\[[#!~]*\x22?(\\w+)\x22?\\].*$"; // @"^\s*\[(\w+|[\#\!\~]+\w+|\x22[\w\s]+\x22|[\#\!\~]+\x22[\w\s]+\x22)\].*$";
 
         internal static void AddPreCompiledLines ( ref List<string> funcLines, ref string[] preCompiledLines, ref List<string> dest, ref KeyValList.KeyValList vars   )
@@ -93,7 +94,7 @@ namespace HPLStudio
         private static ErrorRec DoDef(ref List<string> source, ref List<string> dest, ref KeyValList.KeyValList vars
             , ref int i, ref string trimLine)
         {
-            var parsedLine = trimLine.Substring(4).Split('=');
+            var parsedLine = trimLine.Substring(4).Split(new []{ '=' }, 2);
             if (parsedLine.Length < 2)
             {
                 return new ErrorRec(ErrorRec.ErrCodes.EcErrorInDefineExpression, i, "");
@@ -107,17 +108,23 @@ namespace HPLStudio
             }
             else
             {
-                return new ErrorRec(ErrorRec.ErrCodes.EcErrorIdentifierAlreadyDefined, i, "");
+                return new ErrorRec(ErrorRec.ErrCodes.EcErrorIdentifierAlreadyDefined, i, "")
+                {
+                    Info = identifier
+                };
             }
             return new ErrorRec();
         }
 
-
         private static ErrorRec DoMacro(ref List<string> source, ref List<string> dest, ref KeyValList.KeyValList vars
                                     , ref int i, ref string trimLine)
         {
-            // TODO: реализовать
-            while (trimLine.IndexOf("#endm", StringComparison.Ordinal) != 0)
+            var header = source[i];
+            var macro = Macro.ParseHeader(header);
+
+            var body = new List<string>();
+            dest.Add($";{header}");
+            while (i < source.Count && trimLine.IndexOf("#endm", StringComparison.Ordinal) != 0)
             {
                 i++;
                 var line = source[i];
@@ -126,7 +133,17 @@ namespace HPLStudio
                 {
                     return new ErrorRec(ErrorRec.ErrCodes.EcErrorInDefineExpression, i, "");
                 }
+                dest.Add($";{line}");
+                body.Add(trimLine);
             }
+            body.RemoveAt(body.Count-1);
+            macro.Body = string.Join(Environment.NewLine, body);
+            if (macros.ContainsKey(macro.Name))
+            {
+                return new ErrorRec(ErrorRec.ErrCodes.EcErrorIdentifierAlreadyDefined, i, "") {Info = macro.Name};
+            }
+            macros.Add(macro.Name, macro);
+
             return new ErrorRec();
         }
 
@@ -322,6 +339,32 @@ namespace HPLStudio
             return funcs;
         }
 
+        
+
+        private static string StoreComments(string source, out List<string> comments)
+        {
+            var commentsRe = new Regex(";.*?\n", RegexOptions.Compiled | RegexOptions.Singleline);
+
+            var cmts = new List<string>();
+
+            var r = commentsRe.Replace(source, x =>
+            {
+                cmts.Add(x.Value);
+                return $"{{*{cmts.Count - 1}*}}";
+            });
+
+            comments = cmts;
+            return r;
+        }
+
+        private static string RestoreComments(string source, IReadOnlyList<string> comments)
+        {
+            var commentsRe = new Regex(@"\{\*(\d+)\*\}", RegexOptions.Compiled | RegexOptions.Singleline);
+            return commentsRe.Replace(source, x 
+                    => int.TryParse(x.Groups[1].Value, out var v) ? comments[v] : x.Value );
+        }
+
+
         private static List<string> StoreStrings(ref List<string> source)
         {
             var strings = new List<string>();
@@ -357,9 +400,14 @@ namespace HPLStudio
         }
 
 
+        
         public static ErrorRec Compile(ref List<string> source, out string[] dest, ref KeyValList.KeyValList vars)
         {
-            if (vars.Count == 0) InitPredefinedVars(ref vars);
+            if (vars.Count == 0)
+            {
+                InitPredefinedVars(ref vars);
+                macros = new Dictionary<string, Macro>();
+            }
 
             var savedStrings = StoreStrings(ref source);
 
@@ -375,53 +423,25 @@ namespace HPLStudio
             // Для того чтобы в случаях, как в примере ниже, не портилось имя функции
             // #def CRC=R2
             // [_CalcCRC]
-            var reservedNames = ExtractFuncDefs(source, codeStart, ref vars);
+            var defs = source.Take(codeStart);
+            var implementation = string.Join("\n", source.Skip(codeStart));
+            implementation = macros.Aggregate(implementation, 
+                (current, kv) => kv.Value.Apply(current));
 
-            for (var i = codeStart; i < source.Count; i++)
+            implementation = StoreComments(implementation, out var commentsStorage);
+
+            foreach (var kv in vars.List)
             {
-                var line = source[i];
-                var trimLine = CleanLine(line);
-                if (string.IsNullOrEmpty(trimLine))
-                {
-                    destBuf.Add(line);
-                    continue;
-                }
-                var origTrimLine = trimLine;
+                if(kv.Key == kv.Value) continue;
 
-                foreach (var kv in vars.List)
-                {
-                    if (kv.Key == kv.Value && !reservedNames.Contains(kv.Key))
-                    {
-                        reservedNames.Add(kv.Key);
-                    }
-                    else
-                    {
-                        if (trimLine.Contains(kv.Key))
-                        {
-                            var reserved = reservedNames.FindAll(x => x.Contains(kv.Key) && trimLine.Contains(x));
-                            if (reserved?.Count > 0)
-                            {
-
-                                for (var ri = 0; ri < reserved.Count; ri++)
-                                {
-                                    trimLine = trimLine.Replace(reserved[ri], $"<##{ri}##>");
-                                }
-                                trimLine = trimLine.Replace(kv.Key, kv.Value);
-                                for (var ri = reserved.Count - 1; ri >= 0; ri--)
-                                {
-                                    trimLine = trimLine.Replace($"<##{ri}##>", reserved[ri]);
-                                }
-                            }
-                            else
-                                trimLine = trimLine.Replace(kv.Key, kv.Value);
-                        }
-                    }
-                }
-                if( origTrimLine != trimLine)
-                    line = line.Replace(origTrimLine, trimLine);
-                line = HpmStruct.ApplyGetterSetter(line);
-                destBuf.AddRange(line.Split(new string[] { Environment.NewLine }, StringSplitOptions.None));
+                var re = new Regex($@"\b{Regex.Escape(kv.Key)}\b", RegexOptions.Compiled | RegexOptions.Singleline);
+                implementation = re.Replace(implementation, x => kv.Value);
             }
+
+            implementation = HpmStruct.ApplyGetterSetter(implementation);
+            implementation = RestoreComments(implementation, commentsStorage);
+            destBuf.AddRange(implementation.Split(new string[] { Environment.NewLine }, StringSplitOptions.None));
+
             RestoreStrings(ref source, savedStrings);
             RestoreStrings(ref destBuf, savedStrings);
 
