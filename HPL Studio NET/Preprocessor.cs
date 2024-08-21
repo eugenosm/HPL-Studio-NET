@@ -261,15 +261,6 @@ namespace HPLStudio
                             return (i, r);
                         }
                     }
-                    else if (trimLine.IndexOf("#macro", StringComparison.Ordinal) == 0)
-                    {
-                        var r = DoMacro(ref source, ref dest, ref vars, ref i, ref trimLine);
-                        if (r.Code != ErrorRec.ErrCodes.EcOk)
-                        {
-                            return (i, r);
-                        }
-
-                    }
                     else if (trimLine.IndexOf("#include", StringComparison.Ordinal) == 0)
                     {
                         var r = DoInclude(ref dest, ref vars, ref i, ref trimLine);
@@ -409,9 +400,19 @@ namespace HPLStudio
                 macros = new Dictionary<string, Macro>();
             }
 
-            var savedStrings = StoreStrings(ref source);
 
+            var savedStrings = StoreStrings(ref source);
+            var (err, sourceStr) = Macro.ProcessMacro(string.Join(Environment.NewLine, source), vars, macros);
+            if (err.Code != ErrorRec.ErrCodes.EcOk)
+            {
+                dest = source.ToArray(); 
+                return err;
+            }
             var destBuf = new List<string>();
+
+            source.Clear();
+            source.AddRange(sourceStr.Split(new string[] {Environment.NewLine}, StringSplitOptions.None));
+
             var (codeStart, r) = ProcessDefs(ref source, destBuf, ref vars);
             if (r.Code != ErrorRec.ErrCodes.EcOk)
             {

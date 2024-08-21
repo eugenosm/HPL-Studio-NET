@@ -1,4 +1,5 @@
-﻿namespace HPLStudio
+﻿using FarsiLibrary.Win;
+namespace HPLStudio
 {
     partial class Form1
     {

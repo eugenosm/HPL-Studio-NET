@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
+
 
 namespace HPLStudio
 {
@@ -94,7 +93,37 @@ namespace HPLStudio
             return Match.Replace(source, GenerateReplaceCode);
         }
 
-        
+
+        private static readonly Regex MacroRe = new Regex(@"(#macro\s*.*?)\n+(.*?)#endm",
+            RegexOptions.Singleline | RegexOptions.Compiled);
+
+        public static (ErrorRec, string) ProcessMacro(string source, KeyValList.KeyValList vars, Dictionary<string, Macro> macros)
+        {
+
+            var error = new ErrorRec();
+            var dest = MacroRe.Replace(source, x =>
+            {
+                if (error.Code != ErrorRec.ErrCodes.EcOk) return x.Value;
+                var header = x.Groups[1].Value;
+                var macro = ParseHeader(header);
+                var body = x.Groups[2].Value;
+                macro.Body = body.TrimEnd(null);
+                if (macros.ContainsKey(macro.Name) || vars.IndexOfKey(macro.Name) >= 0)
+                {
+                    error = new ErrorRec(ErrorRec.ErrCodes.EcErrorIdentifierAlreadyDefined,
+                            x.Index, "")
+                        {Info = macro.Name};
+                    return x.Value;
+                }
+                macros.Add(macro.Name, macro);
+                var v = x.Value.Replace(Environment.NewLine, $"{Environment.NewLine};");
+
+                return $";{v}";
+
+            });
+            return (error, dest);
+        }
+
 
     }
 }
