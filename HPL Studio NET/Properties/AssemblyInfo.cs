@@ -6,11 +6,11 @@ using System.Runtime.InteropServices;
 // набора атрибутов. Измените значения этих атрибутов, чтобы изменить сведения,
 // связанные со сборкой.
 [assembly: AssemblyTitle("HPL Studio NET")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription("HPM Macrolanguage translator + IDE")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("EugenOS & Atila")]
+[assembly: AssemblyCompany("EugenOS && Atila")]
 [assembly: AssemblyProduct("HPL Studio NET")]
-[assembly: AssemblyCopyright("Copyright ©  2021")]
+[assembly: AssemblyCopyright("Copyright ©  2017")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

@@ -220,6 +220,16 @@ namespace HPLStudio.Properties {
         /// <summary>
         ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap omega_min {
+            get {
+                object obj = ResourceManager.GetObject("omega_min", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap page_white_text {
             get {
                 object obj = ResourceManager.GetObject("page_white_text", resourceCulture);
@@ -265,6 +275,15 @@ namespace HPLStudio.Properties {
         }
         
         /// <summary>
+        ///   Ищет локализованную строку, похожую на Помощь.
+        /// </summary>
+        internal static string STR_Help {
+            get {
+                return ResourceManager.GetString("STR_Help", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Ищет локализованную строку, похожую на Помощь по .
         /// </summary>
         internal static string STR_HelpFor {
@@ -292,11 +311,38 @@ namespace HPLStudio.Properties {
         }
         
         /// <summary>
+        ///   Ищет локализованную строку, похожую на {0} ver.{1}.
+        /// </summary>
+        internal static string STR_ProductVer {
+            get {
+                return ResourceManager.GetString("STR_ProductVer", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Ищет локализованную строку, похожую на Сохранить как.
         /// </summary>
         internal static string STR_SaveAs {
             get {
                 return ResourceManager.GetString("STR_SaveAs", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на &apos;{0}&apos; не содержит поддерживаемого имени файла.
+        /// </summary>
+        internal static string STR_unsupported_help_file {
+            get {
+                return ResourceManager.GetString("STR_unsupported_help_file", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Предупреждение.
+        /// </summary>
+        internal static string STR_Warning {
+            get {
+                return ResourceManager.GetString("STR_Warning", resourceCulture);
             }
         }
         

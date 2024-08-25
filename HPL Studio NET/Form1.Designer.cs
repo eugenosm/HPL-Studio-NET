@@ -29,6 +29,7 @@ namespace HPLStudio
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
             this.openFileDialog1 = new System.Windows.Forms.OpenFileDialog();
@@ -51,7 +52,7 @@ namespace HPLStudio
             this.progHelpMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.selectedToolHelpMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripMenuItem2 = new System.Windows.Forms.ToolStripSeparator();
-            this.оПрограммеToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.aboutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.ToolStrip1 = new System.Windows.Forms.ToolStrip();
             this.NewButton1 = new System.Windows.Forms.ToolStripButton();
             this.OpenButton1 = new System.Windows.Forms.ToolStripButton();
@@ -115,7 +116,7 @@ namespace HPLStudio
             // 
             this.newFileMenuItem.Name = "newFileMenuItem";
             this.newFileMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.N)));
-            this.newFileMenuItem.Size = new System.Drawing.Size(173, 22);
+            this.newFileMenuItem.Size = new System.Drawing.Size(181, 22);
             this.newFileMenuItem.Text = "Создать";
             this.newFileMenuItem.Click += new System.EventHandler(this.newFileMenuItem_Click);
             // 
@@ -123,7 +124,7 @@ namespace HPLStudio
             // 
             this.openFileMenuItem.Name = "openFileMenuItem";
             this.openFileMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.O)));
-            this.openFileMenuItem.Size = new System.Drawing.Size(173, 22);
+            this.openFileMenuItem.Size = new System.Drawing.Size(181, 22);
             this.openFileMenuItem.Text = "Открыть";
             this.openFileMenuItem.Click += new System.EventHandler(this.openFileMenuItem_Click);
             // 
@@ -131,39 +132,39 @@ namespace HPLStudio
             // 
             this.saveMenuItem.Name = "saveMenuItem";
             this.saveMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.S)));
-            this.saveMenuItem.Size = new System.Drawing.Size(173, 22);
+            this.saveMenuItem.Size = new System.Drawing.Size(181, 22);
             this.saveMenuItem.Text = "Сохранить";
             this.saveMenuItem.Click += new System.EventHandler(this.saveMenuItem_Click);
             // 
             // saveAsMenuItem
             // 
             this.saveAsMenuItem.Name = "saveAsMenuItem";
-            this.saveAsMenuItem.Size = new System.Drawing.Size(173, 22);
+            this.saveAsMenuItem.Size = new System.Drawing.Size(181, 22);
             this.saveAsMenuItem.Text = "Сохранить как";
             this.saveAsMenuItem.Click += new System.EventHandler(this.saveAsMenuItem_Click);
             // 
             // toolStripSeparator4
             // 
             this.toolStripSeparator4.Name = "toolStripSeparator4";
-            this.toolStripSeparator4.Size = new System.Drawing.Size(170, 6);
+            this.toolStripSeparator4.Size = new System.Drawing.Size(178, 6);
             // 
             // printMenuItem
             // 
             this.printMenuItem.Name = "printMenuItem";
             this.printMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.P)));
-            this.printMenuItem.Size = new System.Drawing.Size(173, 22);
+            this.printMenuItem.Size = new System.Drawing.Size(181, 22);
             this.printMenuItem.Text = "Печать";
             this.printMenuItem.Click += new System.EventHandler(this.printMenuItem_Click);
             // 
             // toolStripSeparator5
             // 
             this.toolStripSeparator5.Name = "toolStripSeparator5";
-            this.toolStripSeparator5.Size = new System.Drawing.Size(170, 6);
+            this.toolStripSeparator5.Size = new System.Drawing.Size(178, 6);
             // 
             // recentFilesMenuItem
             // 
             this.recentFilesMenuItem.Name = "recentFilesMenuItem";
-            this.recentFilesMenuItem.Size = new System.Drawing.Size(173, 22);
+            this.recentFilesMenuItem.Size = new System.Drawing.Size(181, 22);
             this.recentFilesMenuItem.Text = "Недавние файлы";
             this.recentFilesMenuItem.DropDownItemClicked += new System.Windows.Forms.ToolStripItemClickedEventHandler(this.recentFilesMenuItem_DropDownItemClicked);
             // 
@@ -203,7 +204,7 @@ namespace HPLStudio
             this.progHelpMenuItem,
             this.selectedToolHelpMenuItem,
             this.toolStripMenuItem2,
-            this.оПрограммеToolStripMenuItem});
+            this.aboutToolStripMenuItem});
             this.helpMenuItem.Name = "helpMenuItem";
             this.helpMenuItem.Size = new System.Drawing.Size(65, 20);
             this.helpMenuItem.Text = "Справка";
@@ -213,6 +214,7 @@ namespace HPLStudio
             this.progHelpMenuItem.Name = "progHelpMenuItem";
             this.progHelpMenuItem.Size = new System.Drawing.Size(206, 22);
             this.progHelpMenuItem.Text = "Помощь по программе";
+            this.progHelpMenuItem.Click += new System.EventHandler(this.progHelpMenuItem_Click);
             // 
             // selectedToolHelpMenuItem
             // 
@@ -226,11 +228,12 @@ namespace HPLStudio
             this.toolStripMenuItem2.Name = "toolStripMenuItem2";
             this.toolStripMenuItem2.Size = new System.Drawing.Size(203, 6);
             // 
-            // оПрограммеToolStripMenuItem
+            // aboutToolStripMenuItem
             // 
-            this.оПрограммеToolStripMenuItem.Name = "оПрограммеToolStripMenuItem";
-            this.оПрограммеToolStripMenuItem.Size = new System.Drawing.Size(206, 22);
-            this.оПрограммеToolStripMenuItem.Text = "О программе...";
+            this.aboutToolStripMenuItem.Name = "aboutToolStripMenuItem";
+            this.aboutToolStripMenuItem.Size = new System.Drawing.Size(206, 22);
+            this.aboutToolStripMenuItem.Text = "О программе...";
+            this.aboutToolStripMenuItem.Click += new System.EventHandler(this.aboutToolStripMenuItem_Click);
             // 
             // ToolStrip1
             // 
@@ -415,7 +418,7 @@ namespace HPLStudio
         private System.Windows.Forms.ToolStripMenuItem progHelpMenuItem;
         private System.Windows.Forms.ToolStripMenuItem selectedToolHelpMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripMenuItem2;
-        private System.Windows.Forms.ToolStripMenuItem оПрограммеToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem aboutToolStripMenuItem;
         private System.Windows.Forms.ToolStripButton CompileButton1;
         private System.Windows.Forms.ToolStripButton toPassInButton1;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator3;

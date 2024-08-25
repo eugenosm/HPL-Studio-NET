@@ -14,6 +14,7 @@ using FastColoredTextBoxNS;
 using System.Text.RegularExpressions;
 using FarsiLibrary.Win;
 using HPLStudio.Properties;
+using Markdig;
 
 namespace HPLStudio
 {
@@ -37,7 +38,10 @@ namespace HPLStudio
 
 //        const string sectionRegex = @"^\[\w+\].*$";
 
+        public static MarkdownPipeline MarkdownPipeline;
         public IniFile iniFile;
+        public AboutForm AboutDlgForm;
+        public BrowserForm Browser;
 
 
         private const int SW_MAXIMIZE = 3;
@@ -54,11 +58,14 @@ namespace HPLStudio
         private static extern int SetActiveWindow( IntPtr hWnd);
 
         private readonly RecentFileHandler _recentFileHandler;
+
         public Form1()
         {
             InitializeComponent();
             _recentFileHandler = new RecentFileHandler();
             this._recentFileHandler.RecentFileToolStripItem = this.recentFilesMenuItem;
+            MarkdownPipeline = new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
+            AboutDlgForm = new AboutForm();
         }
 
         private static void textEditor_TextChanged(object sender, TextChangedEventArgs e)
@@ -281,14 +288,17 @@ namespace HPLStudio
                 {
                     try
                     {
-                        var program = iniFile.GetString(section, "path", "") + "/" + iniFile.GetString(section, "exe", "");
+                        var program = iniFile.GetString(section, "path", "")
+                                      + "\\" + iniFile.GetString(section, "exe", "");
+                        program = Environment.ExpandEnvironmentVariables(program);
                         Image icon = Icon.ExtractAssociatedIcon(program)?.ToBitmap();
                         //ToolStripMenuItem item = new ToolStripMenuItem(section, icon, toolSelect_Click);
                         toolsMenuItem.DropDownItems.Add(section, icon, toolSelect_Click);
                         
                     }
-                    catch (Exception)
+                    catch (Exception exception)
                     {
+                        statusStrip1.Text = exception.ToString();
                     }
                 }               
             }
@@ -429,7 +439,32 @@ namespace HPLStudio
 
         private void selectedToolHelpMenuItem_Click(object sender, EventArgs e)
         {
-            System.Diagnostics.Process.Start(@"hh.exe", pathString + "/" +  helpSting); 
+            var ext = System.IO.Path.GetExtension(helpSting);
+            if (string.IsNullOrEmpty(ext))
+            {
+                MessageBox.Show(string.Format(Resources.STR_unsupported_help_file, helpSting),
+                    Resources.STR_Warning, MessageBoxButtons.OK);
+                return;
+            }
+
+            switch (ext)
+            {
+                case ".chm":
+                    Process.Start(@"hh.exe", 
+                        Environment.ExpandEnvironmentVariables(pathString + "/" + helpSting));
+                    break;
+                case ".md":
+                    MarkDownHelp(Environment.ExpandEnvironmentVariables(pathString + "/" + helpSting));
+                    break;
+                case ".pdf":
+                    break;
+                case ".html":
+                    break;
+                default:
+                    MessageBox.Show(string.Format(Resources.STR_unsupported_help_file, helpSting),
+                        Resources.STR_Warning, MessageBoxButtons.OK);
+                    break;
+            }
 
         }
 
@@ -886,8 +921,63 @@ namespace HPLStudio
             return sb.ToString().Substring(n1, n2 - n1 + 1);
         }
 
+        private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            AboutDlgForm.ShowDialog();
+        }
+
+        internal void HtmlHelp(string pathOrUri)
+        {
+            if (Browser == null || Browser.IsDisposed)
+                Browser = new BrowserForm();
+
+            Browser.Text = Resources.STR_Help;
+            if (!pathOrUri.StartsWith("http"))
+            {
+                pathOrUri = Environment.ExpandEnvironmentVariables(pathOrUri);
+                pathOrUri = $"file://{pathOrUri}";
+            }
+                
+            Browser.webBrowser.Url = new Uri(pathOrUri);
+            Browser.Show();
+
+        }
+
+        internal void MarkDownHelp(string markDownFileName)
+        {
+            if (Browser == null || Browser.IsDisposed)
+                Browser = new BrowserForm();
+
+            Browser.Text = Resources.STR_Help;
+
+            var header =
+                "<html>\r\n" +
+                "  <head>\r\n" +
+                "    <title>\r\n" +
+                "        Справка\r\n" +
+                "    </title>\r\n" +
+                "  </head>\r\n" +
+                "  <body style=\"background-color:#1e2327;text-align:center;color:#9bbbdc\">\r\n";
+            var tail =
+                "  </body>\r\n" +
+                "</html>";
+
+            var helpMd = Encoding.UTF8.GetString(File.ReadAllBytes(markDownFileName));
+            var (script, md) = BrowserForm.ExtractJsFromMd(helpMd);
+            var helpHtml = Markdown.ToHtml(md, Form1.MarkdownPipeline);
+            helpHtml = BrowserForm.PlaceBackExtractedScriptToHtml(helpHtml, script);
+            helpHtml = BrowserForm.FixHtmlLocalImgPath(helpHtml);
+            Browser.webBrowser.DocumentText = header + helpHtml + tail;
+            Browser.Show();
+        }
+
+        private void progHelpMenuItem_Click(object sender, EventArgs e)
+        {
+            MarkDownHelp($"{Application.StartupPath}/readme.md");
+        }
     }
 
+    
     public struct FCTBPlace
     {
         public FastColoredTextBox Editor;
