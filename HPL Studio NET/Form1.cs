@@ -459,6 +459,10 @@ namespace HPLStudio
                 case ".pdf":
                     break;
                 case ".html":
+                    var helpUri = (helpSting.StartsWith("http"))
+                        ? helpSting
+                        : Environment.ExpandEnvironmentVariables(pathString + "/" + helpSting);
+                    HtmlHelp(helpUri);
                     break;
                 default:
                     MessageBox.Show(string.Format(Resources.STR_unsupported_help_file, helpSting),

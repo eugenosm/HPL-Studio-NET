@@ -13,10 +13,164 @@
 ### 1.1 Интерфейс программы
 
 ### 1.2 Настройки программы
+#### 1.2.1 Файл `config.ini` 
+Файл состоит из секций. 
+Секция `[default]` создается программой. Ее не желательно трогать руками.
+Секция `[selected]` создается программой. Ее не желательно трогать руками.
 
+Остальные секции описывают запускаемые инструменты комплекта Omega/Orange и имеют следующий вид:
+```ini
+   [Orange5]
+   path=%ProgramFiles%\O5\orange5.v1.36
+   exe=orange.exe
+   help=help_ru.chm
+   xml=""
+```
+- `path` - путь к паке содержащей инструмент (в данном примере Orange5)
+- `exe` - имя исполняемого файла (может содержать относительный путь, по отношению к `path`)
+- `help` - файл справки. (может содержать относительный путь, по отношению к `path`).  
+Так же может содержать ссылку на интернет страницу, в этом случае 
+путь является абсолютным и должен начинаться с `http://` или `https://`  
+Поддерживаются: `.chm`, `.md`, `.html`,  планируется `.pdf`, ...
+- `xml` - дополнительный xml для кастомной настройки подсветки, подстановки и т.п. (см. следующий пункт справки про файл `hpm.xml`) 
+
+*(Пока не проверялось, и нет примеров использования. Будет добавлено. Идея в том, что каждый инструмент имеет свои отличия в языке HPL. И предлагать и подсвечивать неподдерживаемые фичи, как бы не очень корректно)*
+
+*Все пункты содержащие пути, поддерживают подстановку системных переменных, как в примере с `path`  
+
+#### 1.2.2 Файл `hpm.xml` 
+Содержит настройки подсветки синтаксиса и автоподстановки языка HPL и расширения HPM
+С форматом файла можно ознакомится на [сайте проекта FastColoredTextBox](https://www.codeproject.com/Articles/161871/Fast-Colored-TextBox-for-syntax-highlighting-2)
 
 ## 2. Расширения макроязыка HPM
+## 2.1 include
+Вставляет вместо данной строки содержимое указанного файла.
+
+```
+#include=path_to/file_name.ext
+```
+
+Ммейте ввиду, что необходимо соблюдать общую структуру конечного HPL файла
+
+## 2.2 def
+Однострочная макроподстановка, без параметров
+
+```
+#def statusReg=R12
+
+
+statusReg=DAT, statusReg=&0x17
+```
+
+## 2.3 macro ... endm
+многострочная макроподстановка, с возможностью передачи параметров
+
+```
+#macro start
+SDA=1,SCL=1,SDA=0,SCL=0 ;start
+#endm
+
+#macro out8bit_w_ack(src)
+LOOP=(7,0) {SDA=src[I],SCL=1,SCL=0}  ; out 8 bits 0xA0
+SDA=0,SDA=1,SCL=1,SDA?0              ; ack check
+SCL=0
+#endm
+
+[READ]
+start
+R0=0x0A, R1=0xA1
+out8bit_wack(R0),SDA=0
+out8bit_wack(ADR),SDA=0
+
+start
+out8bit_wack(R1),SDA=1
+LOOP=(7,0){SCL=1,DATA[I]=SDA,SCL=0}  ;read byte
+SDA=1,SCL=1,SCL=0,SDA=0              ;master not asked
+stop
+```
+
+## 2.4 struct ... ends
+Структуры с битовыми полями
+
+```
+R10=FCMEN,L,Off,On                         ; Fail-Safe Clock Monitor Enable bit
+R11=IESO,L,Off,On                          ; Internal External Switchover bit
+R12=CLKOUTEN,L,On,Off                      ; Clock Out Enable bit
+R13=BOREN,L,Off,SBOREN,BUTSLLEP,On         ; Brown-out Reset Enable bits(1)
+R14=PROTECT,L,ALL,_DATA,CODE,NONE          ; CPD and CP
+R15=MCLRE,L,DIGINPUT,MCLR                  ; MCLR/VPP Pin Function Select bit
+R16=PWRTE,L,On,Off                         ; Power-up Timer Enable bit(1)
+R17=WDTE,L,Off,SWDTEN,BUTSLLEP,On          ; Watchdog Timer Enable bit
+R18=FOSC,L,LP,XT,HS,RC,INTOSC,ECL,ECM,ECH  ; Oscillator Selection bits
+
+
+#struct config1=R8
+   FOSC=3
+   WDTE=2
+   PWRTE
+   MCLRE
+   PROTECT=2
+   BOREN=2
+   CLKOUTEN
+   IESO
+   FCMEN
+#ends
+
+
+[_FUSE2BIT]
+
+FOSC=config1.FOSC
+WDTE=config1.WDTE
+PWRTE=config1.PWRTE
+MCLRE=config1.MCLRE
+PROTECT=config1.PROTECT
+BOREN=config1.BOREN
+CLKOUTEN=config1.CLKOUTEN
+IESO=config1.IESO
+FCMEN=config1.FCMEN
+```
+
+- В верхней части, мв имеем объявление регистров для интерфейса программатора.
+В соответсвии с синтаксисом языка HPL
+- Далее объявляется структура битовых полей, с именем config1 хранящаяся в регистре R8. Где:
+  - битвы 0..2 соответсвуют полю FOSC
+  - биты 3..4 полю WDTE
+  - бит 5 полю PWRTE 
+  и так далее.
+- Функция `_FUSE2BIT` преобразует считаное из контроллеро слово _CONFIG1 в значение регистров интерфейса программатора. После компиляции для нее
+будет сгенерирован следующий код *(Вернее функционально идентичный, реализация может измениться при модификации поведения макроязыка)*:
+
+ Так же поддерживается присвоение одних полей другим и операции с ними.
+ *Прим. Возможны ограничения налагаемые компиляторами HPL*
+
+```
+
+
+```
+
+
+```
+[_FUSE2BIT]
+
+R18[0]=R8[0], R18[1]=R8[1], R18[2]=R8[2]
+R17[0]=R8[3], R17[1]=R8[4]
+R16[0]=R8[5]
+R15[0]=R8[6]
+R14[0]=R8[7], R14[1]=R8[8]
+R13[0]= R8[9], R13[1]=R8[10]
+R12[0]=R8[11]
+R11[0]= R8[12]
+R10[0]=R8[13]
+```
+
+Обратите внимание, что имена регистров интерфейса, так же поддерживаются макроязыком и производится их замена, при трансляции из HPM в HPL
+
 
 ## 3. Описание языка программаторов семейства Omega/Orange
+
+### 3.1. Ограничения языка HPL
+*Прим. Пока проверялось на ПО программатора Orange5, для других инструментов ограничения могут отличаться, скорее всег не в большую сторону*
+
+
 
 
