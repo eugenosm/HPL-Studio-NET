@@ -293,6 +293,24 @@ namespace HPLStudio.Properties {
         }
         
         /// <summary>
+        ///   Ищет локализованную строку, похожую на &quot;&lt;html&gt;\r\n  &lt;head&gt;\r\n    &lt;title&gt;\r\n        Справка\r\n    &lt;/title&gt;\r\n  &lt;/head&gt;\r\n  &lt;body style=\&quot;background-color:#1e2327;text-align:center;color:#9bbbdc\&quot;&gt;\r\n&quot;.
+        /// </summary>
+        internal static string STR_HtmlHeader {
+            get {
+                return ResourceManager.GetString("STR_HtmlHeader", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на &quot;  &lt;/body&gt;\r\n&lt;/html&gt;&quot;.
+        /// </summary>
+        internal static string STR_HtmlTail {
+            get {
+                return ResourceManager.GetString("STR_HtmlTail", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Ищет локализованную строку, похожую на Открыть документ.
         /// </summary>
         internal static string STR_OpenDocument {

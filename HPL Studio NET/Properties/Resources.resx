@@ -194,15 +194,21 @@
     <value>..\images\omega_min.jpg;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="STR_ProductVer" xml:space="preserve">
-	  <value>{0} ver.{1}</value>
+    <value>{0} ver.{1}</value>
   </data>
   <data name="STR_unsupported_help_file" xml:space="preserve">
-	  <value>'{0}' не содержит поддерживаемого имени файла</value>
+    <value>'{0}' не содержит поддерживаемого имени файла</value>
   </data>
   <data name="STR_Warning" xml:space="preserve">
-	  <value>Предупреждение</value>
+    <value>Предупреждение</value>
   </data>
   <data name="STR_Help" xml:space="preserve">
-	  <value>Помощь</value>
+    <value>Помощь</value>
+  </data>
+  <data name="STR_HtmlHeader" xml:space="preserve">
+    <value>"&lt;html&gt;\r\n  &lt;head&gt;\r\n    &lt;title&gt;\r\n        Справка\r\n    &lt;/title&gt;\r\n  &lt;/head&gt;\r\n  &lt;body style=\"background-color:#1e2327;text-align:center;color:#9bbbdc\"&gt;\r\n"</value>
+  </data>
+  <data name="STR_HtmlTail" xml:space="preserve">
+    <value>"  &lt;/body&gt;\r\n&lt;/html&gt;"</value>
   </data>
 </root>

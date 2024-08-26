@@ -28,6 +28,42 @@ namespace HPLStudio
 
          */
 
+
+        /*
+         a[class^='color-']
+
+         code
+         {
+           display:inline;
+           padding:1em;
+           margin:1em;
+           background-color:blue;
+         }
+
+         */
+        public static string AddStylesToMdHtml(string source)
+        {
+            //  #65737e grey
+            return @"
+<!DOCTYPE html>
+    <html>
+        <head>
+	        <link href=""Resources/prism.css"" rel=""stylesheet"" />
+            <style type=""text/css"">
+            code
+            {
+                background-color:#65737e;
+            }
+            </style>
+        </head>
+        <body>
+            " + source + @"
+            <script src=""Resources/prism.js""></script>
+        </body>
+    </html>
+";
+        }
+
         public static string FixHtmlLocalImgPath(string html)
         {
             var path = $"file://{Application.StartupPath.Replace("\\", "/")}";

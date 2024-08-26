@@ -6,7 +6,6 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Runtime.Remoting.Messaging;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
@@ -15,6 +14,7 @@ using System.Text.RegularExpressions;
 using FarsiLibrary.Win;
 using HPLStudio.Properties;
 using Markdig;
+using Markdig.Prism;
 
 namespace HPLStudio
 {
@@ -64,7 +64,11 @@ namespace HPLStudio
             InitializeComponent();
             _recentFileHandler = new RecentFileHandler();
             this._recentFileHandler.RecentFileToolStripItem = this.recentFilesMenuItem;
-            MarkdownPipeline = new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
+            MarkdownPipeline = new MarkdownPipelineBuilder()
+                .UseAdvancedExtensions()
+                .UseBootstrap()
+                .UsePrism()
+                .Build();
             AboutDlgForm = new AboutForm();
         }
 
@@ -927,7 +931,8 @@ namespace HPLStudio
 
         private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            AboutDlgForm.ShowDialog();
+            HtmlHelp("https://www.whatsmybrowser.org");
+            //AboutDlgForm.ShowDialog();
         }
 
         internal void HtmlHelp(string pathOrUri)
@@ -940,9 +945,13 @@ namespace HPLStudio
             {
                 pathOrUri = Environment.ExpandEnvironmentVariables(pathOrUri);
                 pathOrUri = $"file://{pathOrUri}";
+                // Browser.webView.CreationProperties.BrowserExecutableFolder = Application.ExecutablePath;
+                // Browser.webView.CreationProperties.UserDataFolder = Application.ExecutablePath + "/Resources";
             }
-                
-            Browser.webBrowser.Url = new Uri(pathOrUri);
+
+            // Browser.webBrowser.Url = new Uri(pathOrUri);
+
+            Browser.webView.Source = new Uri( pathOrUri );
             Browser.Show();
 
         }
@@ -954,34 +963,30 @@ namespace HPLStudio
 
             Browser.Text = Resources.STR_Help;
 
-            var header =
-                "<html>\r\n" +
-                "  <head>\r\n" +
-                "    <title>\r\n" +
-                "        Справка\r\n" +
-                "    </title>\r\n" +
-                "  </head>\r\n" +
-                "  <body style=\"background-color:#1e2327;text-align:center;color:#9bbbdc\">\r\n";
-            var tail =
-                "  </body>\r\n" +
-                "</html>";
-
             var helpMd = Encoding.UTF8.GetString(File.ReadAllBytes(markDownFileName));
             var (script, md) = BrowserForm.ExtractJsFromMd(helpMd);
             var helpHtml = Markdown.ToHtml(md, Form1.MarkdownPipeline);
             helpHtml = BrowserForm.PlaceBackExtractedScriptToHtml(helpHtml, script);
             helpHtml = BrowserForm.FixHtmlLocalImgPath(helpHtml);
-            Browser.webBrowser.DocumentText = header + helpHtml + tail;
-            Browser.Show();
+            helpHtml = BrowserForm.AddStylesToMdHtml(helpHtml);
+
+            var path = $"{Application.StartupPath}/md2html.html";
+            System.IO.File.WriteAllText(path, helpHtml);
+            HtmlHelp(path);
         }
 
         private void progHelpMenuItem_Click(object sender, EventArgs e)
         {
             MarkDownHelp($"{Application.StartupPath}/readme.md");
         }
+
+        private void onlineHelpToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            HtmlHelp("https://github.com/eugenosm/HPL-Studio-NET/blob/master/HPL%20Studio%20NET/README.md");
+        }
     }
 
-    
+
     public struct FCTBPlace
     {
         public FastColoredTextBox Editor;

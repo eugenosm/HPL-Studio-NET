@@ -67,6 +67,7 @@ namespace HPLStudio
             this.printDialog1 = new System.Windows.Forms.PrintDialog();
             this.tsFiles = new FarsiLibrary.Win.FATabStrip();
             this.faTabStripItem1 = new FarsiLibrary.Win.FATabStripItem();
+            this.справкаВСетиToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             this.ToolStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.tsFiles)).BeginInit();
@@ -204,7 +205,8 @@ namespace HPLStudio
             this.progHelpMenuItem,
             this.selectedToolHelpMenuItem,
             this.toolStripMenuItem2,
-            this.aboutToolStripMenuItem});
+            this.aboutToolStripMenuItem,
+            this.справкаВСетиToolStripMenuItem});
             this.helpMenuItem.Name = "helpMenuItem";
             this.helpMenuItem.Size = new System.Drawing.Size(65, 20);
             this.helpMenuItem.Text = "Справка";
@@ -367,6 +369,13 @@ namespace HPLStudio
             this.faTabStripItem1.TabIndex = 0;
             this.faTabStripItem1.Title = "TabStrip Page 1";
             // 
+            // справкаВСетиToolStripMenuItem
+            // 
+            this.справкаВСетиToolStripMenuItem.Name = "справкаВСетиToolStripMenuItem";
+            this.справкаВСетиToolStripMenuItem.Size = new System.Drawing.Size(206, 22);
+            this.справкаВСетиToolStripMenuItem.Text = "Справка в сети";
+            this.справкаВСетиToolStripMenuItem.Click += new System.EventHandler(this.onlineHelpToolStripMenuItem_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -428,6 +437,7 @@ namespace HPLStudio
         private FarsiLibrary.Win.FATabStrip tsFiles;
         private FarsiLibrary.Win.FATabStripItem faTabStripItem1;
         private System.Windows.Forms.ToolStripButton changeHotKeysButton;
+        private System.Windows.Forms.ToolStripMenuItem справкаВСетиToolStripMenuItem;
     }
 }
 
