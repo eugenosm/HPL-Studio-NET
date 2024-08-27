@@ -8,8 +8,11 @@ namespace HPLStudio
 {
     class Macro
     {
+        public static Dictionary<string, Macro> GlobalStorage = null;
+
         public Macro()
         {
+            GlobalStorage ??= new Dictionary<string, Macro>();
         }
 
         public string Name { get; set; }
@@ -97,8 +100,9 @@ namespace HPLStudio
         private static readonly Regex MacroRe = new Regex(@"(#macro\s*.*?)\n+(.*?)#endm",
             RegexOptions.Singleline | RegexOptions.Compiled);
 
-        public static (ErrorRec, string) ProcessMacro(string source, KeyValList.KeyValList vars, Dictionary<string, Macro> macros)
+        public static (ErrorRec, string) ProcessMacroDefs(string source, KeyValList.KeyValList vars, Dictionary<string, Macro> macros = null)
         {
+            macros ??= GlobalStorage; 
 
             var error = new ErrorRec();
             var dest = MacroRe.Replace(source, x =>

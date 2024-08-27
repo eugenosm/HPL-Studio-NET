@@ -15,6 +15,7 @@ using FarsiLibrary.Win;
 using HPLStudio.Properties;
 using Markdig;
 using Markdig.Prism;
+using KeyValList = KeyValList.KeyValList;
 
 namespace HPLStudio
 {
@@ -411,9 +412,11 @@ namespace HPLStudio
 
         private void PreprocessorMenuItem_Click(object sender, EventArgs e)
         {
-            var vars = new KeyValList.KeyValList();
+            Preprocessor.Variables ??= new global::KeyValList.KeyValList(); 
+            Preprocessor.Variables.Clear();
+            
             var source = TextEditor.Lines.ToList();
-            var result =  Preprocessor.Compile(ref source, out var dest, ref vars);
+            var result =  Preprocessor.Compile(ref source, out var dest);
             if (result == null || result.Code == ErrorRec.ErrCodes.EcOk)
             {
                 var workDir = System.IO.Path.GetDirectoryName(FileName);

@@ -5,6 +5,7 @@ namespace KeyValList
 {
     public class KeyValList
     {
+
         public KeyValList()
         {
             List = new List<KeyValuePair<string, string>>();
@@ -87,5 +88,7 @@ namespace KeyValList
         /// возвращает количество сохраненных значение
         /// </summary>
         public int Count => List.Count;
+
+        public void Clear() => List.Clear();
     }
 }

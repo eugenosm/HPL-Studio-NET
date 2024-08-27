@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 namespace HPLStudio
 {
 
+
     public class ErrorRec
     {
         public enum ErrCodes
@@ -60,21 +61,27 @@ namespace HPLStudio
         }
     };
 
+    internal class ParsingInfo
+    {
+        public static int LineNo;
+    }
+
     internal class Preprocessor
     {
-        public static Dictionary<string, Macro> macros = new();
+        public static KeyValList.KeyValList Variables;
+
         public const string SectionRegex = "^\\[[#!~]*\x22?(\\w+)\x22?\\].*$"; // @"^\s*\[(\w+|[\#\!\~]+\w+|\x22[\w\s]+\x22|[\#\!\~]+\x22[\w\s]+\x22)\].*$";
 
-        internal static void AddPreCompiledLines ( ref List<string> funcLines, ref string[] preCompiledLines, ref List<string> dest, ref KeyValList.KeyValList vars   )
+        internal static void AddPreCompiledLines ( 
+            ref List<string> funcLines, ref string[] preCompiledLines, ref List<string> dest, KeyValList.KeyValList vars = null )
         {
+            vars ??= Variables;
+
             dest.AddRange(preCompiledLines);
-            var funcs = ExtractFuncDefs(funcLines, 0, ref vars);
-            foreach (var f in funcs)
+            var funcs = ExtractFuncDefs(funcLines, 0,  vars);
+            foreach (var f in funcs.Where(f => vars.IndexOfKey(f) < 0))
             {
-                if (vars.IndexOfKey(f) < 0)
-                {
-                    vars.Add(f, f);
-                }
+                vars.Add(f, f);
             }
             /*
 
@@ -91,24 +98,25 @@ namespace HPLStudio
         }
 
 
-        private static ErrorRec DoDef(ref List<string> source, ref List<string> dest, ref KeyValList.KeyValList vars
-            , ref int i, ref string trimLine)
+        private static ErrorRec DoDef(
+            ref List<string> source, ref List<string> dest, ref string trimLine, KeyValList.KeyValList vars = null)
         {
+            vars ??= Variables;
             var parsedLine = trimLine.Substring(4).Split(new []{ '=' }, 2);
             if (parsedLine.Length < 2)
             {
-                return new ErrorRec(ErrorRec.ErrCodes.EcErrorInDefineExpression, i, "");
+                return new ErrorRec(ErrorRec.ErrCodes.EcErrorInDefineExpression, ParsingInfo.LineNo, "");
             }
             var identifier = parsedLine[0].Trim();
             var value = parsedLine[1].Trim();
             if (CheckIdentifierIsFree(ref vars, identifier))
             {
                 PushDef(ref vars, identifier, value);
-                dest.Add(";" + source[i]);
+                dest.Add(";" + source[ParsingInfo.LineNo]);
             }
             else
             {
-                return new ErrorRec(ErrorRec.ErrCodes.EcErrorIdentifierAlreadyDefined, i, "")
+                return new ErrorRec(ErrorRec.ErrCodes.EcErrorIdentifierAlreadyDefined, ParsingInfo.LineNo, "")
                 {
                     Info = identifier
                 };
@@ -116,51 +124,53 @@ namespace HPLStudio
             return new ErrorRec();
         }
 
-        private static ErrorRec DoMacro(ref List<string> source, ref List<string> dest, ref KeyValList.KeyValList vars
-                                    , ref int i, ref string trimLine)
+        /*
+        private static ErrorRec DoMacro(
+            ref List<string> source, ref List<string> dest, ref string trimLine, KeyValList.KeyValList vars = null)
         {
-            var header = source[i];
+            vars ??= Variables;
+            var header = source[ParsingInfo.LineNo];
             var macro = Macro.ParseHeader(header);
 
             var body = new List<string>();
             dest.Add($";{header}");
-            while (i < source.Count && trimLine.IndexOf("#endm", StringComparison.Ordinal) != 0)
+            while (ParsingInfo.LineNo < source.Count && trimLine.IndexOf("#endm", StringComparison.Ordinal) != 0)
             {
-                i++;
-                var line = source[i];
+                ParsingInfo.LineNo++;
+                var line = source[ParsingInfo.LineNo];
                 trimLine = line.Trim();
-                if (i > source.Count())
+                if (ParsingInfo.LineNo > source.Count())
                 {
-                    return new ErrorRec(ErrorRec.ErrCodes.EcErrorInDefineExpression, i, "");
+                    return new ErrorRec(ErrorRec.ErrCodes.EcErrorInDefineExpression, ParsingInfo.LineNo, "");
                 }
                 dest.Add($";{line}");
                 body.Add(trimLine);
             }
             body.RemoveAt(body.Count-1);
             macro.Body = string.Join(Environment.NewLine, body);
-            if (macros.ContainsKey(macro.Name))
+            if (Macro.GlobalStorage.ContainsKey(macro.Name))
             {
-                return new ErrorRec(ErrorRec.ErrCodes.EcErrorIdentifierAlreadyDefined, i, "") {Info = macro.Name};
+                return new ErrorRec(ErrorRec.ErrCodes.EcErrorIdentifierAlreadyDefined, ParsingInfo.LineNo, "") {Info = macro.Name};
             }
-            macros.Add(macro.Name, macro);
+            Macro.GlobalStorage.Add(macro.Name, macro);
 
             return new ErrorRec();
         }
-
+        */
 
         private static int _fieldBytes(int fieldSize, int shift = 0)
             => (fieldSize + shift) / 8 + (((fieldSize + shift) % 8) == 0 ? 0 : 1);
         
 
-        private static ErrorRec DoInclude(ref List<string> dest, ref KeyValList.KeyValList vars
-                            , ref int i, ref string trimLine)
+        private static ErrorRec DoInclude(ref List<string> dest, ref string trimLine, KeyValList.KeyValList vars = null)
         {
+            vars ??= Variables;
             var parsedLine = trimLine.Split( '=');
             var includeFileName = parsedLine[1].Trim();
             if (System.IO.File.Exists(includeFileName))
             {
                 var include = System.IO.File.ReadAllLines(includeFileName).ToList();
-                var result = Compile(ref include, out var dst, ref vars);                           
+                var result = Compile(ref include, out var dst, vars);                           
                 if (result != null && result.Code != ErrorRec.ErrCodes.EcOk)
                 {
                     if (string.IsNullOrEmpty(result.FileName))
@@ -169,12 +179,13 @@ namespace HPLStudio
                     }
                     return result;
                 }
-                AddPreCompiledLines(ref include, ref dst, ref dest, ref vars);
+                AddPreCompiledLines(ref include, ref dst, ref dest, vars);
                 include.Clear();
             }
             else
             {
-                return new ErrorRec(ErrorRec.ErrCodes.EcErrorInIncludeExpressionOrFileNotFound, i, "");
+                return new ErrorRec(
+                    ErrorRec.ErrCodes.EcErrorInIncludeExpressionOrFileNotFound, ParsingInfo.LineNo, "");
             }
             return new ErrorRec();
         }
@@ -201,20 +212,22 @@ namespace HPLStudio
             PushDef(ref vars, "#type.push_button", "P");
         }
 
-        public static bool FuncDefCheck(string line, ref KeyValList.KeyValList vars, out string identifier)
+        public static (bool, string) FuncDefCheck(string line, KeyValList.KeyValList vars=null)
         {
+            vars ??= Variables;
+
             var m = Regex.Match(line, SectionRegex);
             if (m.Success)
             {
-                identifier = m.Groups[1].Value;
+                var identifier = m.Groups[1].Value;
                 if (vars.IndexOfKey(identifier) < 0)
                 {
                     PushDef(ref vars, identifier, identifier);
                 }
-                return true;
+                return (true, identifier);
             }
-            identifier = null;
-            return false;
+            
+            return (false, null);
         }
 
 
@@ -232,14 +245,16 @@ namespace HPLStudio
         /// <param name="dest">Обработанный код</param>
         /// <param name="vars">Переменные</param>
         /// <returns>При удаче возвращает EcOk и Номер строки с первой секцией (функцией). При ошибке возвращает строку ошибки.</returns>
-        private static (int, ErrorRec) ProcessDefs(ref List<string> source, List<string> dest, ref KeyValList.KeyValList vars)
+        private static (int, ErrorRec) ProcessDefs(ref List<string> source, List<string> dest, KeyValList.KeyValList vars=null)
         {
-            for (var i = 0; i < source.Count; i++)
+            vars ??= Variables;
+
+            for (ParsingInfo.LineNo = 0; ParsingInfo.LineNo < source.Count; ParsingInfo.LineNo++)
             {
-                var line = source[i];
+                var line = source[ParsingInfo.LineNo];
                 if (Regex.Match(line, SectionRegex).Success)
                 { // найдена первая секция "кода", выходим
-                    return (i, new ErrorRec());
+                    return (ParsingInfo.LineNo, new ErrorRec());
                 }
 
                 var trimLine = CleanLine(line);
@@ -247,38 +262,39 @@ namespace HPLStudio
                 {
                     if (trimLine.IndexOf("#def", StringComparison.Ordinal) == 0)
                     {
-                        var r = DoDef(ref source, ref dest, ref vars, ref i, ref trimLine);
+                        var r = DoDef(ref source, ref dest, ref trimLine, vars);
                         if (r.Code != ErrorRec.ErrCodes.EcOk)
                         {
-                            return (i, r);
+                            return (ParsingInfo.LineNo, r);
                         }
                     }
                     else if (trimLine.IndexOf("#struct", StringComparison.Ordinal) == 0)
                     {
-                        var r = HpmStruct.DoStruct(ref source, ref dest, ref vars, ref i, ref trimLine, ref line);
+                        var r = HpmStruct.DoStruct(ref source, ref dest, ref vars, ref ParsingInfo.LineNo, ref trimLine, ref line);
                         if (r.Code != ErrorRec.ErrCodes.EcOk)
                         {
-                            return (i, r);
+                            return (ParsingInfo.LineNo, r);
                         }
                     }
                     else if (trimLine.IndexOf("#include", StringComparison.Ordinal) == 0)
                     {
-                        var r = DoInclude(ref dest, ref vars, ref i, ref trimLine);
+                        var r = DoInclude(ref dest, ref trimLine);
                         if (r.Code != ErrorRec.ErrCodes.EcOk)
                         {
-                            return (i, r);
+                            return (ParsingInfo.LineNo, r);
                         }
 
                     }
                     else
                     {
-                        return (i, new ErrorRec(ErrorRec.ErrCodes.EcErrorIncorrectDirective, i, ""));
+                        return (ParsingInfo.LineNo, new ErrorRec(
+                            ErrorRec.ErrCodes.EcErrorIncorrectDirective, ParsingInfo.LineNo, ""));
                     }
                 }
                 else
                 {
-                    var r = ProcessSocketAndVars(ref dest, ref vars, line, trimLine, i);
-                    if (r.Code != ErrorRec.ErrCodes.EcOk) return (i, r);
+                    var r = ProcessSocketAndVars(ref dest, ref vars, line, trimLine, ParsingInfo.LineNo);
+                    if (r.Code != ErrorRec.ErrCodes.EcOk) return (ParsingInfo.LineNo, r);
                 }
             }
 
@@ -316,13 +332,15 @@ namespace HPLStudio
             return new ErrorRec();
         }
 
-        public static List<string> ExtractFuncDefs(List<string> source, int codeStart, ref KeyValList.KeyValList vars, List<string> functions=null)
+        public static List<string> ExtractFuncDefs(List<string> source, int codeStart, KeyValList.KeyValList vars=null, List<string> functions=null)
         {
+            vars ??= Variables;
             var funcs = functions ?? new List<string>();
             for (var i = codeStart; i < source.Count; i++)
             {
                 var line = source[i];
-                if (FuncDefCheck(line, ref vars, out var identifier))
+                var (ok, identifier) = FuncDefCheck(line, vars);
+                if (ok)
                 {
                     funcs.Add(identifier);
                 }
@@ -336,15 +354,15 @@ namespace HPLStudio
         {
             var commentsRe = new Regex(";.*?\n", RegexOptions.Compiled | RegexOptions.Singleline);
 
-            var cmts = new List<string>();
+            var foundComments = new List<string>();
 
             var r = commentsRe.Replace(source, x =>
             {
-                cmts.Add(x.Value);
-                return $"{{*{cmts.Count - 1}*}}";
+                foundComments.Add(x.Value);
+                return $"{{*{foundComments.Count - 1}*}}";
             });
 
-            comments = cmts;
+            comments = foundComments;
             return r;
         }
 
@@ -392,17 +410,19 @@ namespace HPLStudio
 
 
         
-        public static ErrorRec Compile(ref List<string> source, out string[] dest, ref KeyValList.KeyValList vars)
+        public static ErrorRec Compile(ref List<string> source, out string[] dest, KeyValList.KeyValList vars = null)
         {
+            vars ??= Variables;            
             if (vars.Count == 0)
             {
                 InitPredefinedVars(ref vars);
-                macros = new Dictionary<string, Macro>();
+                Macro.GlobalStorage ??= new Dictionary<string, Macro>();
+                Macro.GlobalStorage.Clear();
             }
 
 
             var savedStrings = StoreStrings(ref source);
-            var (err, sourceStr) = Macro.ProcessMacro(string.Join(Environment.NewLine, source), vars, macros);
+            var (err, sourceStr) = Macro.ProcessMacroDefs(string.Join(Environment.NewLine, source), vars);
             if (err.Code != ErrorRec.ErrCodes.EcOk)
             {
                 dest = source.ToArray(); 
@@ -413,7 +433,7 @@ namespace HPLStudio
             source.Clear();
             source.AddRange(sourceStr.Split(new string[] {Environment.NewLine}, StringSplitOptions.None));
 
-            var (codeStart, r) = ProcessDefs(ref source, destBuf, ref vars);
+            var (codeStart, r) = ProcessDefs(ref source, destBuf, vars);
             if (r.Code != ErrorRec.ErrCodes.EcOk)
             {
                 dest = destBuf.ToArray();
@@ -426,7 +446,7 @@ namespace HPLStudio
             // [_CalcCRC]
             var defs = source.Take(codeStart);
             var implementation = string.Join("\n", source.Skip(codeStart));
-            implementation = macros.Aggregate(implementation, 
+            implementation = Macro.GlobalStorage.Aggregate(implementation, 
                 (current, kv) => kv.Value.Apply(current));
 
             implementation = StoreComments(implementation, out var commentsStorage);

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -17,7 +18,7 @@ namespace HPLStudio
             if (x.Groups[1].Success)
             {
                 var getterName = $"_get_{x.Groups[5].Value}";
-                var getter = Preprocessor.macros[getterName];
+                var getter = Macro.GlobalStorage[getterName];
                 var arg = x.Groups[2].Value;
                 return getter.Apply($"{getterName}({arg})");
             }
@@ -25,7 +26,7 @@ namespace HPLStudio
             if (x.Groups[6].Success)
             {
                 var setterName = $"_set_{x.Groups[8].Value}";
-                var setter = Preprocessor.macros[setterName];
+                var setter = Macro.GlobalStorage[setterName];
                 var arg = x.Groups[9].Value;
                 //var cmt = $"; {x.Groups[8].Value} = {arg}\n";
                 return arg == "R0"  
@@ -40,6 +41,18 @@ namespace HPLStudio
             return GetSetRe.Replace(source, GetSetEvaluator);
         }
 
+        /// <summary>
+        /// Обрабатывает структуру.
+        /// Для начала обрабатывает ее определение. Заносит все ее поля в переменные.
+        /// Затем создает временные макросы для всех геттеров и сеттеров полей структуры 
+        /// </summary>
+        /// <param name="source">Исходный код</param>
+        /// <param name="dest">Результирующий код</param>
+        /// <param name="vars">глобальный список переменных</param>
+        /// <param name="srcLine">номер строки в исходном коде, где было найдено определение структуры</param>
+        /// <param name="trimLine">строка в исходном коде, где было найдено определение структуры, после trim()</param>
+        /// <param name="line">ссылка на строку в исходном коде, где было найдено определение структуры</param>
+        /// <returns>Код ошибки</returns>
         public static ErrorRec DoStruct(ref List<string> source, ref List<string> dest, ref KeyValList.KeyValList vars
             , ref int srcLine, ref string trimLine, ref string line)
         {
@@ -73,8 +86,8 @@ namespace HPLStudio
                     dest.Add(";" + line);
                     line = source[srcLine];
                     trimLine = line.Trim();
-                    var structFuncs = new List<string>();
-                    structFuncs.Clear();
+                    var structGetSetMacroDefs = new List<string>();
+                    structGetSetMacroDefs.Clear();
                     while (trimLine.IndexOf("#ends", StringComparison.Ordinal) != 0)
                     {
                         if (trimLine.StartsWith(";"))
@@ -98,27 +111,26 @@ namespace HPLStudio
                                 {
                                     return new ErrorRec(ErrorRec.ErrCodes.EcErrorInParameters, srcLine, "");
                                 }
-                                structFuncs.Add(";---------------------------");
                                 var macroName = $"_set_{identifierHead}_{aStructFieldName}";
                                 //structFuncs.Add(funcName);
                                 //structFuncs.Add(";R0 - value");//  ;$VALUE - value, or use as parameter
-                                structFuncs.Add($"#macro {macroName}(arg)");
+                                structGetSetMacroDefs.Add($"#macro {macroName}(arg)");
 
                                 var field = (isArray)
                                     ? new ArrStructField(valueHeader, bitPos, fieldSize)
                                     : new StructField(valueHeader, bitPos, fieldSize);
 
-                                structFuncs.Add(field.Setter);
-                                structFuncs.Add("#endm");
-                                structFuncs.Add(";---------------------------");
+                                structGetSetMacroDefs.Add(field.Setter);
+                                structGetSetMacroDefs.Add("#endm");
+                                structGetSetMacroDefs.Add(";---------------------------");
                                 // value = $"[_get_{identifierHead}_{aStructFieldName}]";
                                 // structFuncs.Add(value);
                                 macroName = $"_get_{identifierHead}_{aStructFieldName}";
-                                structFuncs.Add($"#macro {macroName}(dst)");
+                                structGetSetMacroDefs.Add($"#macro {macroName}(dst)");
                                 //structFuncs.Add(";R0 - result");//  ;$VALUE - result
-                                structFuncs.Add(field.Getter);
-                                structFuncs.Add("#endm");
-                                structFuncs.Add(";---------------------------");
+                                structGetSetMacroDefs.Add(field.Getter);
+                                structGetSetMacroDefs.Add("#endm");
+                                structGetSetMacroDefs.Add(";---------------------------");
 
                                 value = $"{{_get_set({identifierHead}_{aStructFieldName})}}";
                                 Preprocessor.PushDef(ref vars, value, value);
@@ -171,13 +183,19 @@ namespace HPLStudio
                     }
                     Preprocessor.PushDef(ref vars, identifierHead, valueHeader);
                     dest.Add(";" + line);
-                    var result = Preprocessor.Compile(ref structFuncs, out var strFuncAdd, ref vars);
+                    var result = Preprocessor.Compile(ref structGetSetMacroDefs, out var strFuncAdd, vars);
                     if (result != null && result.Code != ErrorRec.ErrCodes.EcOk)
                     {
                         return result;
                     }
-                    //Preprocessor.AddPreCompiledLines(ref structFuncs, ref strFuncAdd, ref dest, ref vars);
-                    structFuncs.Clear();
+                    dest.AddRange(strFuncAdd);
+                    // Preprocessor.AddPreCompiledLines(ref structFuncs, ref strFuncAdd, ref dest, ref vars);
+                    //dest.AddRange(structGetSetMacroses);
+                    // var structMacroDefString = string.Join(Environment.NewLine, structGetSetMacroDefs);
+                    // var (err, _) = Macro.ProcessMacroDefs(structMacroDefString, vars);
+                    // if (err.Code != ErrorRec.ErrCodes.EcOk)
+                    //     return err;
+                    structGetSetMacroDefs.Clear();
                 }
                 else
                 {
