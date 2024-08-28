@@ -57,7 +57,7 @@ namespace HPLStudio
             , ref int srcLine, ref string trimLine, ref string line)
         {
 
-            var parsedLine = trimLine.Substring(7).Split('=');
+            var parsedLine = trimLine.Substring("#struct".Length).Split('=');
             if (parsedLine.Length < 2)
             {
                 return new ErrorRec(ErrorRec.ErrCodes.EcErrorInDefineExpression, srcLine, "");
@@ -178,14 +178,17 @@ namespace HPLStudio
                         trimLine = line.Trim();
                         if (srcLine > source.Count)
                         {
+                            srcLine--;
                             return new ErrorRec(ErrorRec.ErrCodes.EcErrorInDefineExpression, srcLine, "");
                         }
                     }
                     Preprocessor.PushDef(ref vars, identifierHead, valueHeader);
                     dest.Add(";" + line);
+                    dest.Add("" );
                     var result = Preprocessor.Compile(ref structGetSetMacroDefs, out var strFuncAdd, vars);
                     if (result != null && result.Code != ErrorRec.ErrCodes.EcOk)
                     {
+
                         return result;
                     }
                     dest.AddRange(strFuncAdd);

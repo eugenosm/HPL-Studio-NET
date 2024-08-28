@@ -230,7 +230,11 @@ namespace HPLStudio
             return (false, null);
         }
 
-
+        /// <summary>
+        /// Возвращает строку очищенную от стартовых и конечных пробелов, а так же от комментариев
+        /// </summary>
+        /// <param name="line"></param>
+        /// <returns></returns>
         private static string CleanLine(string line)
         {
             var trimLine = line.Trim();
@@ -249,6 +253,7 @@ namespace HPLStudio
         {
             vars ??= Variables;
 
+            // Цикл обрабатывает строки в секции определений, до первой секции кода
             for (ParsingInfo.LineNo = 0; ParsingInfo.LineNo < source.Count; ParsingInfo.LineNo++)
             {
                 var line = source[ParsingInfo.LineNo];
@@ -258,11 +263,11 @@ namespace HPLStudio
                 }
 
                 var trimLine = CleanLine(line);
-                if (trimLine.Length > 0 && trimLine[0] == '#')
+                if (trimLine.Length > 0 && trimLine[0] == '#') // если это строка с директивой
                 {
                     if (trimLine.IndexOf("#def", StringComparison.Ordinal) == 0)
                     {
-                        var r = DoDef(ref source, ref dest, ref trimLine, vars);
+                        var r = DoDef(ref source, ref dest, ref trimLine, vars); 
                         if (r.Code != ErrorRec.ErrCodes.EcOk)
                         {
                             return (ParsingInfo.LineNo, r);
@@ -420,18 +425,19 @@ namespace HPLStudio
                 Macro.GlobalStorage.Clear();
             }
 
-
+            // сохраняем строки в исходном файле, заменяя их тегами с индексом в массиве savedStrings
             var savedStrings = StoreStrings(ref source);
-            var (err, sourceStr) = Macro.ProcessMacroDefs(string.Join(Environment.NewLine, source), vars);
+
+            var (err, sourceWoMacro) = Macro.ProcessMacroDefs(string.Join(Environment.NewLine, source), vars);
             if (err.Code != ErrorRec.ErrCodes.EcOk)
             {
                 dest = source.ToArray(); 
                 return err;
             }
             var destBuf = new List<string>();
-
+            
             source.Clear();
-            source.AddRange(sourceStr.Split(new string[] {Environment.NewLine}, StringSplitOptions.None));
+            source.AddRange(sourceWoMacro.Split(new string[] {Environment.NewLine}, StringSplitOptions.None));
 
             var (codeStart, r) = ProcessDefs(ref source, destBuf, vars);
             if (r.Code != ErrorRec.ErrCodes.EcOk)
