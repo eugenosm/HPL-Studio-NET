@@ -13,6 +13,9 @@ namespace HPLStudio
             @"((@?\w+)(\[\w+\])?\s*=\s*@\w+(\{_get_set\((\w+)\)\}))|(@\w+(\{_get_set\((\w+)\)\})\s*=\s*(@?\w+)(\[\w+\])?)"
             , RegexOptions.Singleline | RegexOptions.Compiled);
 
+        private static readonly Regex StructRe = new Regex(@"#struct\s*(?<structDef>.*?)\n+(?<structBody>.*?)#ends",
+            RegexOptions.Singleline | RegexOptions.Compiled);
+
         private static string GetSetEvaluator(Match x)
         {
             if (x.Groups[1].Success)
@@ -39,6 +42,43 @@ namespace HPLStudio
         public static string ApplyGetterSetter(string source)
         {
             return GetSetRe.Replace(source, GetSetEvaluator);
+        }
+
+        public static ErrorRec ProcessStructDefs(string source, KeyValList.KeyValList vars = null,
+            Dictionary<string, Macro> macros = null)
+        {
+            macros ??= Macro.GlobalStorage;
+            vars ??= Preprocessor.Variables;
+            var error = new ErrorRec();
+            var dest = StructRe .Replace(source, x =>
+            {
+                if (error.Code != ErrorRec.ErrCodes.EcOk) return x.Value;
+
+                var parsedLine = x.Groups["structDef"].Value.Split('=');
+                if (parsedLine.Length < 2)
+                {
+                    var (line, col) = Preprocessor.FindLineNoInBlob(source, x.Index);
+                    error = new ErrorRec(ErrorRec.ErrCodes.EcErrorInDefineExpression, line, "");
+                    return x.Value;
+                }
+                var identifierHead = parsedLine[0].Trim();
+                var bitPos = 0;
+                var valueHeader = parsedLine[1].Trim();
+                var isArray = valueHeader[0] == '@';
+
+                /*
+                 * setter => _set_Struct_Field(R0) => Struct.Field = R0;
+                 * getter => _get_Struct_field() => R0=(Struct.Field)
+                 *
+                 */
+
+
+
+
+            });
+
+
+            return new ErrorRec();
         }
 
         /// <summary>

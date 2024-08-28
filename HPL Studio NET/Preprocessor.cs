@@ -537,6 +537,22 @@ namespace HPLStudio
             return false;
         }
 
+       public static (int, int) FindLineNoInBlob(string blob, int position)
+       {
+           var lineNo = 0;
+           var lfPos = 0;
+           for (var i = 0; i < position; i++)
+           {
+               if (blob[i] == '\n')
+               {
+                   lineNo++;
+                   lfPos = i;
+               }
+           }
+
+           return (lineNo, position - lfPos);
+       }
+
     }
 
    
