@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 
 
@@ -569,8 +570,34 @@ namespace HPLStudio
            return (lineNo, position - lfPos);
        }
 
+
+       public static string CommentAllLines(string source)
+       {
+           var paste = false;
+           var sb = new StringBuilder(source.Length + source.Length / 10);
+           foreach (var c in source)
+           {
+               if (c is '\n' or '\r')
+               {
+                   paste = true;
+                   sb.Append(c);
+                   continue;
+               }
+
+               if (paste && c != ';')
+               {
+                   sb.Append(';');
+               }
+               sb.Append(c);
+               paste = false;
+           }
+
+           return sb.ToString();
+       }
+
+
     }
 
-   
+
 }
  

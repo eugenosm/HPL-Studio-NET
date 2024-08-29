@@ -122,7 +122,7 @@ namespace HPLStudio
                     return x.Value;
                 }
                 macros.Add(macro.Name, macro);
-                var v = x.Value.Replace(Environment.NewLine, $"{Environment.NewLine};");
+                var v = x.Value.Replace("\n", "\n;");
 
                 return $";{v}";
 

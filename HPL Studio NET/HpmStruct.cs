@@ -74,6 +74,7 @@ namespace HPLStudio
                 structGetSetMacroDefs.Add(field.Setter);
                 structGetSetMacroDefs.Add("#endm");
                 structGetSetMacroDefs.Add(";---------------------------");
+                structGetSetMacroDefs.Add("");
             }
 
             var dest = StructRe.Replace(source, x =>
@@ -102,9 +103,9 @@ namespace HPLStudio
                     if (!Preprocessor.CheckPrevDefined(ref vars, identifierHead))
                     {
                         var hdrLen = x.Groups["structBody"].Index - x.Index;
-                        var result = new List<string> { 
-                            "; " + source.Substring(x.Index, hdrLen) // "; #truct name=Rn ; ....\n"    
-                        };
+                        // var result = new List<string> { 
+                        //     "; " + source.Substring(x.Index, hdrLen) // "; #truct name=Rn ; ....\n"    
+                        // };
 
                         var structBody = x.Groups["structBody"].Value.Split(
                             Preprocessor.CrLrSeparators, StringSplitOptions.RemoveEmptyEntries );
@@ -114,7 +115,7 @@ namespace HPLStudio
                             line++;
                             if (fieldDefStr.Trim().StartsWith(";")) // no field def, just a comment, skip it
                             {
-                                result.Add(fieldDefStr);
+                                // result.Add(fieldDefStr);
                                 continue;
                             }
 
@@ -125,7 +126,7 @@ namespace HPLStudio
                                 return x.Value;
                             }
 
-                            result.Add($"; {fieldDefStr}");
+//                            result.Add($"; {fieldDefStr}");
 
                             var fieldDef = fieldDefMatch.Groups["field"].Value;
                             var parsedField = fieldDef.Split('=');
@@ -167,7 +168,7 @@ namespace HPLStudio
                             {
 
                                 Preprocessor.PushDef(ref vars, identifier, valueHeader + value);
-                                result.Add("; " + fieldDefStr);
+                                //result.Add("; " + fieldDefStr);
                             }
                             else
                             {
@@ -192,13 +193,15 @@ namespace HPLStudio
                                 }
                             }
                         }
-                        result.Add(";" + line);
-                        result.Add("");
+                        //result.Add(";" + line);
+                        //result.Add("");
 
                         (error, macroCommented) = Macro.ProcessMacroDefs(string.Join("\n", structGetSetMacroDefs));
                         structGetSetMacroDefs.Clear();
-                        result.AddRange(macroCommented.Split('\n'));
-                        return string.Join("\n", result);
+                        // result.AddRange(macroCommented.Split('\n'));
+                        // return string.Join("\n", result);
+
+                        return Preprocessor.CommentAllLines(x.Value) + "\n" + macroCommented;
                     }
                 }
                 error = new ErrorRec(ErrorRec.ErrCodes.EcErrorSubDefinePreviouslyDefined, line, "");
