@@ -9,12 +9,19 @@ namespace HPLStudio
 
     internal class HpmStruct
     {
+
         public static Regex GetSetRe = new Regex(
             @"((@?\w+)(\[\w+\])?\s*=\s*@\w+(\{_get_set\((\w+)\)\}))|(@\w+(\{_get_set\((\w+)\)\})\s*=\s*(@?\w+)(\[\w+\])?)"
             , RegexOptions.Singleline | RegexOptions.Compiled);
 
-        private static readonly Regex StructRe = new Regex(@"#struct\s*(?<structDef>.*?)\n+(?<structBody>.*?)#ends",
-            RegexOptions.Singleline | RegexOptions.Compiled);
+        private static readonly Regex StructRe = 
+            new Regex(@"#struct\s*(?<structDef>.*?)(?<comment>\s*;[\w\t ~!@#$%^&*()\-+=`""""\\/|№?\{\[\]\}':;<>,.]*)?\n(?<structBody>.*?)#ends"
+                , RegexOptions.Singleline | RegexOptions.Compiled);
+
+        private static readonly Regex FieldRe =
+            new Regex(
+                @"\s*(?<field>\w+(\s*=\s*\d+)?)(?<comment>\s*;[\w\t ~!@#$%^&*()\-+=`""""""""\\/|№?\{\[\]\}':;<>,.]*)?\n"
+                , RegexOptions.Singleline | RegexOptions.Compiled);
 
         private static string GetSetEvaluator(Match x)
         {
@@ -50,14 +57,14 @@ namespace HPLStudio
             macros ??= Macro.GlobalStorage;
             vars ??= Preprocessor.Variables;
             var error = new ErrorRec();
-            var dest = StructRe .Replace(source, x =>
+            var dest = StructRe.Replace(source, x =>
             {
                 if (error.Code != ErrorRec.ErrCodes.EcOk) return x.Value;
+                var (line, col) = Preprocessor.FindLineNoInBlob(source, x.Index);
 
                 var parsedLine = x.Groups["structDef"].Value.Split('=');
                 if (parsedLine.Length < 2)
                 {
-                    var (line, col) = Preprocessor.FindLineNoInBlob(source, x.Index);
                     error = new ErrorRec(ErrorRec.ErrCodes.EcErrorInDefineExpression, line, "");
                     return x.Value;
                 }
@@ -71,10 +78,37 @@ namespace HPLStudio
                  * getter => _get_Struct_field() => R0=(Struct.Field)
                  *
                  */
+                if (Preprocessor.CheckIdentifierIsFree(ref vars, identifierHead))
+                {
+                    if (!Preprocessor.CheckPrevDefined(ref vars, identifierHead))
+                    {
+                        var hdrLen = x.Groups["structBody"].Index - x.Index;
+                        var result = "; " + source.Substring(x.Index, hdrLen); // "; #truct name=Rn ; ....\n"
+
+                        foreach (Match fieldMatch in FieldRe.Matches(x.Groups["structBody"].Value))
+                        {
+                            //(line, col) = Preprocessor.FindLineNoInBlob(source, fieldMatch.Index);
+                            if (!fieldMatch.Success)
+                            {
+                                error = new ErrorRec(ErrorRec.ErrCodes.EcErrorInDefineExpression, line, "");
+                                return x.Value;
+                            }
+
+                            result = "; " + fieldMatch.Value;
+
+                        }
 
 
-
-
+                        var structBody = x.Groups["structBody"].Value.Split();
+                        foreach (var fieldDefStr in structBody)
+                        {
+                            var fieldDef = Preprocessor.CleanLine(fieldDefStr).Split('=');
+                            
+                        }
+                    }
+                }
+                error = new ErrorRec(ErrorRec.ErrCodes.EcErrorSubDefinePreviouslyDefined, line, "");
+                return x.Value;
             });
 
 

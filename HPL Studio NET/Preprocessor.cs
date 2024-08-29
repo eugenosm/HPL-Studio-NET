@@ -235,11 +235,11 @@ namespace HPLStudio
         /// </summary>
         /// <param name="line"></param>
         /// <returns></returns>
-        private static string CleanLine(string line)
+        public static string CleanLine(string line)
         {
             var trimLine = line.Trim();
             var commentPos = trimLine.IndexOf(';');
-            if (commentPos >= 0) trimLine = trimLine.Substring(0, commentPos);
+            if (commentPos >= 0) trimLine = trimLine.Substring(0, commentPos).TrimEnd();
             return trimLine;
         }
         /// <summary>
