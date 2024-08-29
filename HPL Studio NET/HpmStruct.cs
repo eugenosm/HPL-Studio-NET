@@ -25,7 +25,7 @@ namespace HPLStudio
 
         private static readonly Regex FieldRe =
             new Regex(
-                @"\s*(?<field>\w+(\s*=\s*\d+)?)\s*(?<comment>;.*)?\n"
+                @"\s*(?<field>\w+(\s*=\s*\d+)?)\s*(?<comment>;.*)?"
                 , RegexOptions.Singleline | RegexOptions.Compiled);
 
 
@@ -57,7 +57,7 @@ namespace HPLStudio
             return GetSetRe.Replace(source, GetSetEvaluator);
         }
 
-        public static ErrorRec ProcessStructDefs(string source, KeyValList.KeyValList vars = null,
+        public static (ErrorRec, string) ProcessStructDefs(string source, KeyValList.KeyValList vars = null,
             Dictionary<string, Macro> macros = null)
         {
             macros ??= Macro.GlobalStorage;
@@ -66,6 +66,15 @@ namespace HPLStudio
 
             var structGetSetMacroDefs = new List<string>();
             structGetSetMacroDefs.Clear();
+            string macroCommented;
+
+            void addFieldMacro(string macroName, StructField field)
+            {
+                structGetSetMacroDefs.Add($"#macro {macroName}");
+                structGetSetMacroDefs.Add(field.Setter);
+                structGetSetMacroDefs.Add("#endm");
+                structGetSetMacroDefs.Add(";---------------------------");
+            }
 
             var dest = StructRe.Replace(source, x =>
             {
@@ -97,18 +106,20 @@ namespace HPLStudio
                             "; " + source.Substring(x.Index, hdrLen) // "; #truct name=Rn ; ....\n"    
                         };
 
-                        var structBody = x.Groups["structBody"].Value.Split();
+                        var structBody = x.Groups["structBody"].Value.Split(
+                            Preprocessor.CrLrSeparators, StringSplitOptions.RemoveEmptyEntries );
+
                         foreach (var fieldDefStr in structBody)
                         {
                             line++;
-                            if (fieldDefStr.Trim().StartsWith(";"))
+                            if (fieldDefStr.Trim().StartsWith(";")) // no field def, just a comment, skip it
                             {
                                 result.Add(fieldDefStr);
                                 continue;
                             }
 
                             var fieldDefMatch = FieldRe.Match(fieldDefStr);
-                            if (!fieldDefMatch.Success)
+                            if (!fieldDefMatch.Success) // incorrect field definition
                             {
                                 error = new ErrorRec(ErrorRec.ErrCodes.EcErrorInDefineExpression, line, "");
                                 return x.Value;
@@ -135,20 +146,12 @@ namespace HPLStudio
                                     error = new ErrorRec(ErrorRec.ErrCodes.EcErrorInParameters, line, "");
                                     return x.Value;
                                 }
-                                var macroName = $"_set_{identifierHead}_{aStructFieldName}";
-                                structGetSetMacroDefs.Add($"#macro {macroName}(arg)");
                                 var field = (isArray)
                                     ? new ArrStructField(valueHeader, bitPos, fieldSize)
                                     : new StructField(valueHeader, bitPos, fieldSize);
-                                structGetSetMacroDefs.Add(field.Setter);
-                                structGetSetMacroDefs.Add("#endm");
-                                structGetSetMacroDefs.Add(";---------------------------");
-                                macroName = $"_get_{identifierHead}_{aStructFieldName}";
-                                structGetSetMacroDefs.Add($"#macro {macroName}(dst)");
-                                structGetSetMacroDefs.Add(field.Getter);
-                                structGetSetMacroDefs.Add("#endm");
-                                structGetSetMacroDefs.Add(";---------------------------");
 
+                                addFieldMacro($"_set_{identifierHead}_{aStructFieldName}(arg)", field);
+                                addFieldMacro($"_get_{identifierHead}_{aStructFieldName}(dst)", field);
                                 value = $"{{_get_set({identifierHead}_{aStructFieldName})}}";
                                 Preprocessor.PushDef(ref vars, value, value);
                                 bitPos += fieldSize;
@@ -177,29 +180,31 @@ namespace HPLStudio
 
                             if (!isArray)
                             {
-                                for (var bc = 0; bc < fieldSize; bc++)
+                                for (var fieldBit = 0; fieldBit < fieldSize; fieldBit++)
                                 {
-                                    value = $"[{bitPos - fieldSize + bc}]";
-                                    var ident = identifier + $"[{bc}]";
+                                    var regBit = $"[{bitPos - fieldSize + fieldBit}]";
+                                    var ident = identifier + $"[{fieldBit}]";
                                     if (Preprocessor.CheckIdentifierIsFree(ref vars, ident))
                                     {
-                                        Preprocessor.PushDef(ref vars, ident, valueHeader + value);
+                                        Preprocessor.PushDef(ref vars, ident, valueHeader + regBit);
                                     }
 
                                 }
                             }
-
-
                         }
+                        result.Add(";" + line);
+                        result.Add("");
+
+                        (error, macroCommented) = Macro.ProcessMacroDefs(string.Join("\n", structGetSetMacroDefs));
+                        structGetSetMacroDefs.Clear();
+                        result.AddRange(macroCommented.Split('\n'));
                         return string.Join("\n", result);
                     }
                 }
                 error = new ErrorRec(ErrorRec.ErrCodes.EcErrorSubDefinePreviouslyDefined, line, "");
                 return x.Value;
             });
-
-
-            return new ErrorRec();
+            return (error, dest);
         }
 
         /// <summary>

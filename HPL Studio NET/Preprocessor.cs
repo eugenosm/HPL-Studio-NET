@@ -68,6 +68,8 @@ namespace HPLStudio
 
     internal class Preprocessor
     {
+        public static readonly string[] CrLrSeparators = new string[] {Environment.NewLine, "\n", "\r"};
+
         public static KeyValList.KeyValList Variables;
 
         public const string SectionRegex = "^\\[[#!~]*\x22?(\\w+)\x22?\\].*$"; // @"^\s*\[(\w+|[\#\!\~]+\w+|\x22[\w\s]+\x22|[\#\!\~]+\x22[\w\s]+\x22)\].*$";
@@ -273,14 +275,19 @@ namespace HPLStudio
                             return (ParsingInfo.LineNo, r);
                         }
                     }
-                    else if (trimLine.IndexOf("#struct", StringComparison.Ordinal) == 0)
-                    {
-                        var r = HpmStruct.DoStruct(ref source, ref dest, ref vars, ref ParsingInfo.LineNo, ref trimLine, ref line);
-                        if (r.Code != ErrorRec.ErrCodes.EcOk)
-                        {
-                            return (ParsingInfo.LineNo, r);
-                        }
-                    }
+                    // else if (trimLine.IndexOf("#struct", StringComparison.Ordinal) == 0)
+                    // {
+                    //     var (r, dst) = HpmStruct.ProcessStructDefs( string.Join("\n", source) , vars);
+                    //     //var r = HpmStruct.DoStruct(ref source, ref dest, ref vars, ref ParsingInfo.LineNo, ref trimLine, ref line);
+                    //     if (r.Code != ErrorRec.ErrCodes.EcOk)
+                    //     {
+                    //         return (ParsingInfo.LineNo, r);
+                    //     }
+                    //     else
+                    //     {
+                    //         dest.AddRange(dst.Split('\n'));
+                    //     }
+                    // }
                     else if (trimLine.IndexOf("#include", StringComparison.Ordinal) == 0)
                     {
                         var r = DoInclude(ref dest, ref trimLine);
@@ -428,16 +435,25 @@ namespace HPLStudio
             // сохраняем строки в исходном файле, заменяя их тегами с индексом в массиве savedStrings
             var savedStrings = StoreStrings(ref source);
 
-            var (err, sourceWoMacro) = Macro.ProcessMacroDefs(string.Join(Environment.NewLine, source), vars);
+            var (err, processedSource) = Macro.ProcessMacroDefs(string.Join("\n", source), vars);
             if (err.Code != ErrorRec.ErrCodes.EcOk)
             {
                 dest = source.ToArray(); 
                 return err;
             }
+
+            (err, processedSource) = HpmStruct.ProcessStructDefs(string.Join("\n", processedSource), vars);
+            //var r = HpmStruct.DoStruct(ref source, ref dest, ref vars, ref ParsingInfo.LineNo, ref trimLine, ref line);
+            if (err.Code != ErrorRec.ErrCodes.EcOk)
+            {
+                dest = source.ToArray();
+                return err;
+            }
+
             var destBuf = new List<string>();
-            
             source.Clear();
-            source.AddRange(sourceWoMacro.Split(new string[] {Environment.NewLine}, StringSplitOptions.None));
+            source.AddRange(processedSource.Split(CrLrSeparators, StringSplitOptions.None));
+
 
             var (codeStart, r) = ProcessDefs(ref source, destBuf, vars);
             if (r.Code != ErrorRec.ErrCodes.EcOk)
@@ -467,7 +483,7 @@ namespace HPLStudio
 
             implementation = HpmStruct.ApplyGetterSetter(implementation);
             implementation = RestoreComments(implementation, commentsStorage);
-            destBuf.AddRange(implementation.Split(new string[] { Environment.NewLine }, StringSplitOptions.None));
+            destBuf.AddRange(implementation.Split(CrLrSeparators, StringSplitOptions.None));
 
             RestoreStrings(ref source, savedStrings);
             RestoreStrings(ref destBuf, savedStrings);

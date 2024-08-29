@@ -36,11 +36,16 @@
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup>
     <ApplicationIcon>omega.ico</ApplicationIcon>
   </PropertyGroup>
-  <PropertyGroup />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
+  </PropertyGroup>
   <Target Name="SetSourceRevisionId" BeforeTargets="InitializeSourceControlInformation">
     <!-- Генерирует версию ПО по коммиту GIT, следующего вида:-->
     <!-- 
@@ -51,6 +56,8 @@
     Прим. В основной части <PropertyGroup> желательно чтобы отсутсвовали записи 
      <Version> и <InformationalVersion> иначе они могут `передавить` генерированный вариант
     -->
+    <Exec Command="echo $(Configuration)" ConsoleToMSBuild="True" IgnoreExitCode="True">
+    </Exec>
     <Exec Command="git describe --long --always --exclude=* --abbrev=8" ConsoleToMSBuild="True" IgnoreExitCode="False">
       <Output PropertyName="SourceRevisionId" TaskParameter="ConsoleOutput" />
     </Exec>

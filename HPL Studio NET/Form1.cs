@@ -326,6 +326,9 @@ namespace HPLStudio
             {
                 defaultHotkeysMapping = HotkeysMapping.Parse(hk);
             }
+
+            Environment.SetEnvironmentVariable("WEBVIEW2_USER_DATA_FOLDER",
+                Environment.ExpandEnvironmentVariables($"%APPDATA%\\{Application.ProductName}"));
         }
 
         private System.Diagnostics.Process _progerWindow = null;
