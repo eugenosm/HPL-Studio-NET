@@ -18,10 +18,16 @@ namespace HPLStudio
             new Regex(@"#struct\s*(?<structDef>.*?)(?<comment>\s*;[\w\t ~!@#$%^&*()\-+=`""""\\/|№?\{\[\]\}':;<>,.]*)?\n(?<structBody>.*?)#ends"
                 , RegexOptions.Singleline | RegexOptions.Compiled);
 
+        // private static readonly Regex FieldRe =
+        //     new Regex(
+        //         @"\s*(?<field>\w+(\s*=\s*\d+)?)(?<comment>\s*;[\w\t ~!@#$%^&*()\-+=`""""""""\\/|№?\{\[\]\}':;<>,.]*)?\n"
+        //         , RegexOptions.Singleline | RegexOptions.Compiled);
+
         private static readonly Regex FieldRe =
             new Regex(
-                @"\s*(?<field>\w+(\s*=\s*\d+)?)(?<comment>\s*;[\w\t ~!@#$%^&*()\-+=`""""""""\\/|№?\{\[\]\}':;<>,.]*)?\n"
+                @"\s*(?<field>\w+(\s*=\s*\d+)?)\s*(?<comment>;.*)?\n"
                 , RegexOptions.Singleline | RegexOptions.Compiled);
+
 
         private static string GetSetEvaluator(Match x)
         {
@@ -57,6 +63,10 @@ namespace HPLStudio
             macros ??= Macro.GlobalStorage;
             vars ??= Preprocessor.Variables;
             var error = new ErrorRec();
+
+            var structGetSetMacroDefs = new List<string>();
+            structGetSetMacroDefs.Clear();
+
             var dest = StructRe.Replace(source, x =>
             {
                 if (error.Code != ErrorRec.ErrCodes.EcOk) return x.Value;
@@ -83,28 +93,105 @@ namespace HPLStudio
                     if (!Preprocessor.CheckPrevDefined(ref vars, identifierHead))
                     {
                         var hdrLen = x.Groups["structBody"].Index - x.Index;
-                        var result = "; " + source.Substring(x.Index, hdrLen); // "; #truct name=Rn ; ....\n"
+                        var result = new List<string> { 
+                            "; " + source.Substring(x.Index, hdrLen) // "; #truct name=Rn ; ....\n"    
+                        };
 
-                        foreach (Match fieldMatch in FieldRe.Matches(x.Groups["structBody"].Value))
+                        var structBody = x.Groups["structBody"].Value.Split();
+                        foreach (var fieldDefStr in structBody)
                         {
-                            //(line, col) = Preprocessor.FindLineNoInBlob(source, fieldMatch.Index);
-                            if (!fieldMatch.Success)
+                            line++;
+                            if (fieldDefStr.Trim().StartsWith(";"))
+                            {
+                                result.Add(fieldDefStr);
+                                continue;
+                            }
+
+                            var fieldDefMatch = FieldRe.Match(fieldDefStr);
+                            if (!fieldDefMatch.Success)
                             {
                                 error = new ErrorRec(ErrorRec.ErrCodes.EcErrorInDefineExpression, line, "");
                                 return x.Value;
                             }
 
-                            result = "; " + fieldMatch.Value;
+                            result.Add($"; {fieldDefStr}");
+
+                            var fieldDef = fieldDefMatch.Groups["field"].Value;
+                            var parsedField = fieldDef.Split('=');
+
+                            string identifier;
+                            string value;
+
+                            var fieldSize = (parsedField.Length > 1)
+                                ? int.TryParse(parsedField[1].Trim(), out var fs) ? fs : -1
+                                : 1;
+
+                            if (isArray || fieldSize != 1)
+                            {
+                                var aStructFieldName = parsedField[0].Trim();
+                                identifier = identifierHead + "." + aStructFieldName;
+                                if (fieldSize is < 1 or > 32)
+                                {
+                                    error = new ErrorRec(ErrorRec.ErrCodes.EcErrorInParameters, line, "");
+                                    return x.Value;
+                                }
+                                var macroName = $"_set_{identifierHead}_{aStructFieldName}";
+                                structGetSetMacroDefs.Add($"#macro {macroName}(arg)");
+                                var field = (isArray)
+                                    ? new ArrStructField(valueHeader, bitPos, fieldSize)
+                                    : new StructField(valueHeader, bitPos, fieldSize);
+                                structGetSetMacroDefs.Add(field.Setter);
+                                structGetSetMacroDefs.Add("#endm");
+                                structGetSetMacroDefs.Add(";---------------------------");
+                                macroName = $"_get_{identifierHead}_{aStructFieldName}";
+                                structGetSetMacroDefs.Add($"#macro {macroName}(dst)");
+                                structGetSetMacroDefs.Add(field.Getter);
+                                structGetSetMacroDefs.Add("#endm");
+                                structGetSetMacroDefs.Add(";---------------------------");
+
+                                value = $"{{_get_set({identifierHead}_{aStructFieldName})}}";
+                                Preprocessor.PushDef(ref vars, value, value);
+                                bitPos += fieldSize;
+                            }
+                            else
+                            {
+                                identifier = identifierHead + "." + fieldDef.Trim();
+                                value = $"[{bitPos}]";
+                                bitPos++;
+                            }
+
+                            if (Preprocessor.CheckIdentifierIsFree(ref vars, identifier))
+                            {
+
+                                Preprocessor.PushDef(ref vars, identifier, valueHeader + value);
+                                result.Add("; " + fieldDefStr);
+                            }
+                            else
+                            {
+                                error = new ErrorRec(ErrorRec.ErrCodes.EcErrorIdentifierAlreadyDefined, line, "")
+                                {
+                                    Info = identifier
+                                };
+                                return x.Value;
+                            }
+
+                            if (!isArray)
+                            {
+                                for (var bc = 0; bc < fieldSize; bc++)
+                                {
+                                    value = $"[{bitPos - fieldSize + bc}]";
+                                    var ident = identifier + $"[{bc}]";
+                                    if (Preprocessor.CheckIdentifierIsFree(ref vars, ident))
+                                    {
+                                        Preprocessor.PushDef(ref vars, ident, valueHeader + value);
+                                    }
+
+                                }
+                            }
+
 
                         }
-
-
-                        var structBody = x.Groups["structBody"].Value.Split();
-                        foreach (var fieldDefStr in structBody)
-                        {
-                            var fieldDef = Preprocessor.CleanLine(fieldDefStr).Split('=');
-                            
-                        }
+                        return string.Join("\n", result);
                     }
                 }
                 error = new ErrorRec(ErrorRec.ErrCodes.EcErrorSubDefinePreviouslyDefined, line, "");
