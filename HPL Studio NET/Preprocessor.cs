@@ -8,7 +8,6 @@ using System.Text.RegularExpressions;
 namespace HPLStudio
 {
 
-
     public class ErrorRec
     {
         public enum ErrCodes
@@ -65,11 +64,13 @@ namespace HPLStudio
     internal class ParsingInfo
     {
         public static int LineNo;
+        public static bool AddDefs = true;
+        public static bool AddGeneratedMacro = true;
     }
 
     internal class Preprocessor
     {
-        public static readonly string[] CrLrSeparators = new string[] {Environment.NewLine, "\n", "\r"};
+        public static readonly string[] CrLfSeparators = new string[] {Environment.NewLine, "\n", "\r"};
 
         public static KeyValList.KeyValList Variables;
 
@@ -443,7 +444,8 @@ namespace HPLStudio
                 return err;
             }
 
-            (err, processedSource) = HpmStruct.ProcessStructDefs(string.Join("\n", processedSource), vars);
+            string structInternals;
+            (err, processedSource, structInternals) = HpmStruct.ProcessStructDefs(string.Join("\n", processedSource), vars);
             //var r = HpmStruct.DoStruct(ref source, ref dest, ref vars, ref ParsingInfo.LineNo, ref trimLine, ref line);
             if (err.Code != ErrorRec.ErrCodes.EcOk)
             {
@@ -453,7 +455,7 @@ namespace HPLStudio
 
             var destBuf = new List<string>();
             source.Clear();
-            source.AddRange(processedSource.Split(CrLrSeparators, StringSplitOptions.None));
+            source.AddRange(processedSource.Split(CrLfSeparators, StringSplitOptions.None));
 
 
             var (codeStart, r) = ProcessDefs(ref source, destBuf, vars);
@@ -484,7 +486,19 @@ namespace HPLStudio
 
             implementation = HpmStruct.ApplyGetterSetter(implementation);
             implementation = RestoreComments(implementation, commentsStorage);
-            destBuf.AddRange(implementation.Split(CrLrSeparators, StringSplitOptions.None));
+
+            if (ParsingInfo.AddGeneratedMacro)
+            {
+                
+                destBuf.AddRange(Preprocessor.Variables.List.Select<KeyValuePair<string, string>, string>(
+                    x => $"; {x.Key} = {x.Value}"));
+            }
+
+            if (ParsingInfo.AddGeneratedMacro)
+            {
+                destBuf.AddRange(structInternals.Split('\n'));
+            }
+            destBuf.AddRange(implementation.Split(CrLfSeparators, StringSplitOptions.None));
 
             RestoreStrings(ref source, savedStrings);
             RestoreStrings(ref destBuf, savedStrings);
@@ -574,7 +588,7 @@ namespace HPLStudio
        public static string CommentAllLines(string source)
        {
            var paste = false;
-           var sb = new StringBuilder(source.Length + source.Length / 10);
+           var sb = new StringBuilder(";", source.Length + source.Length / 10);
            foreach (var c in source)
            {
                if (c is '\n' or '\r')

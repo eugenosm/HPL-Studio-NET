@@ -57,7 +57,17 @@ namespace HPLStudio
             return GetSetRe.Replace(source, GetSetEvaluator);
         }
 
-        public static (ErrorRec, string) ProcessStructDefs(string source, KeyValList.KeyValList vars = null,
+        /// <summary>
+        /// Обрабатывает все определения структур в исходном файле, формируя по ним список переменных (полей) и
+        /// макросов (геттеров/сеттеров). Добавляет макросы и переменные в хранилища.
+        /// Возвращает исходную строку с закомментированными определениями структур.
+        /// Отдельно возвращает строку с закомментированными сформированными макросами и дефайнами.
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="vars"></param>
+        /// <param name="macros"></param>
+        /// <returns></returns>
+        public static (ErrorRec, string, string) ProcessStructDefs(string source, KeyValList.KeyValList vars = null,
             Dictionary<string, Macro> macros = null)
         {
             macros ??= Macro.GlobalStorage;
@@ -66,16 +76,9 @@ namespace HPLStudio
 
             var structGetSetMacroDefs = new List<string>();
             structGetSetMacroDefs.Clear();
+            StringBuilder macroCommentedBuilder = new ();
             string macroCommented;
 
-            void addFieldMacro(string macroName, StructField field)
-            {
-                structGetSetMacroDefs.Add($"#macro {macroName}");
-                structGetSetMacroDefs.Add(field.Setter);
-                structGetSetMacroDefs.Add("#endm");
-                structGetSetMacroDefs.Add(";---------------------------");
-                structGetSetMacroDefs.Add("");
-            }
 
             var dest = StructRe.Replace(source, x =>
             {
@@ -103,19 +106,14 @@ namespace HPLStudio
                     if (!Preprocessor.CheckPrevDefined(ref vars, identifierHead))
                     {
                         var hdrLen = x.Groups["structBody"].Index - x.Index;
-                        // var result = new List<string> { 
-                        //     "; " + source.Substring(x.Index, hdrLen) // "; #truct name=Rn ; ....\n"    
-                        // };
-
                         var structBody = x.Groups["structBody"].Value.Split(
-                            Preprocessor.CrLrSeparators, StringSplitOptions.RemoveEmptyEntries );
+                            Preprocessor.CrLfSeparators, StringSplitOptions.RemoveEmptyEntries );
 
                         foreach (var fieldDefStr in structBody)
                         {
                             line++;
                             if (fieldDefStr.Trim().StartsWith(";")) // no field def, just a comment, skip it
                             {
-                                // result.Add(fieldDefStr);
                                 continue;
                             }
 
@@ -151,8 +149,8 @@ namespace HPLStudio
                                     ? new ArrStructField(valueHeader, bitPos, fieldSize)
                                     : new StructField(valueHeader, bitPos, fieldSize);
 
-                                addFieldMacro($"_set_{identifierHead}_{aStructFieldName}(arg)", field);
-                                addFieldMacro($"_get_{identifierHead}_{aStructFieldName}(dst)", field);
+                                AddFieldMacro($"_set_{identifierHead}_{aStructFieldName}(arg)", field);
+                                AddFieldMacro($"_get_{identifierHead}_{aStructFieldName}(dst)", field);
                                 value = $"{{_get_set({identifierHead}_{aStructFieldName})}}";
                                 Preprocessor.PushDef(ref vars, value, value);
                                 bitPos += fieldSize;
@@ -197,17 +195,28 @@ namespace HPLStudio
                         //result.Add("");
 
                         (error, macroCommented) = Macro.ProcessMacroDefs(string.Join("\n", structGetSetMacroDefs));
+                        macroCommentedBuilder.Append("\n");
+                        macroCommentedBuilder.Append(macroCommented);
                         structGetSetMacroDefs.Clear();
                         // result.AddRange(macroCommented.Split('\n'));
                         // return string.Join("\n", result);
 
-                        return Preprocessor.CommentAllLines(x.Value) + "\n" + macroCommented;
+                        return Preprocessor.CommentAllLines(x.Value);
                     }
                 }
                 error = new ErrorRec(ErrorRec.ErrCodes.EcErrorSubDefinePreviouslyDefined, line, "");
                 return x.Value;
             });
-            return (error, dest);
+            return (error, dest, macroCommentedBuilder.ToString());
+
+            void AddFieldMacro(string macroName, StructField field)
+            {
+                structGetSetMacroDefs.Add($"#macro {macroName}");
+                structGetSetMacroDefs.Add(field.Setter);
+                structGetSetMacroDefs.Add("#endm");
+                structGetSetMacroDefs.Add(";---------------------------");
+                structGetSetMacroDefs.Add("");
+            }
         }
 
         /// <summary>
