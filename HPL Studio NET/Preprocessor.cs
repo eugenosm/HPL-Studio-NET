@@ -277,19 +277,6 @@ namespace HPLStudio
                             return (ParsingInfo.LineNo, r);
                         }
                     }
-                    // else if (trimLine.IndexOf("#struct", StringComparison.Ordinal) == 0)
-                    // {
-                    //     var (r, dst) = HpmStruct.ProcessStructDefs( string.Join("\n", source) , vars);
-                    //     //var r = HpmStruct.DoStruct(ref source, ref dest, ref vars, ref ParsingInfo.LineNo, ref trimLine, ref line);
-                    //     if (r.Code != ErrorRec.ErrCodes.EcOk)
-                    //     {
-                    //         return (ParsingInfo.LineNo, r);
-                    //     }
-                    //     else
-                    //     {
-                    //         dest.AddRange(dst.Split('\n'));
-                    //     }
-                    // }
                     else if (trimLine.IndexOf("#include", StringComparison.Ordinal) == 0)
                     {
                         var r = DoInclude(ref dest, ref trimLine);
