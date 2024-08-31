@@ -97,12 +97,14 @@ namespace HPLStudio
         }
 
 
+        // (?<macroDef>#macro\s*.*?)\n+(?<macroBody>.*?)#endm
         private static readonly Regex MacroRe = new Regex(@"(#macro\s*.*?)\n+(.*?)#endm",
             RegexOptions.Singleline | RegexOptions.Compiled);
 
-        public static (ErrorRec, string) ProcessMacroDefs(string source, KeyValList.KeyValList vars, Dictionary<string, Macro> macros = null)
+        public static (ErrorRec, string) ProcessMacroDefs(string source, KeyValList.KeyValList vars=null, Dictionary<string, Macro> macros = null)
         {
-            macros ??= GlobalStorage; 
+            macros ??= GlobalStorage;
+            vars ??= Preprocessor.Variables;
 
             var error = new ErrorRec();
             var dest = MacroRe.Replace(source, x =>
@@ -120,7 +122,7 @@ namespace HPLStudio
                     return x.Value;
                 }
                 macros.Add(macro.Name, macro);
-                var v = x.Value.Replace(Environment.NewLine, $"{Environment.NewLine};");
+                var v = x.Value.Replace("\n", "\n;");
 
                 return $";{v}";
 

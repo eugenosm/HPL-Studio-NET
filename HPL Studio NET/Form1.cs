@@ -16,6 +16,7 @@ using HPLStudio.Properties;
 using Markdig;
 using Markdig.Prism;
 using KeyValList = KeyValList.KeyValList;
+using System.Configuration;
 
 namespace HPLStudio
 {
@@ -40,9 +41,11 @@ namespace HPLStudio
 //        const string sectionRegex = @"^\[\w+\].*$";
 
         public static MarkdownPipeline MarkdownPipeline;
-        public IniFile iniFile;
+        public IniFile ConfigIniFile;
         public AboutForm AboutDlgForm;
         public BrowserForm Browser;
+        public Configuration Config;
+
 
 
         private const int SW_MAXIMIZE = 3;
@@ -205,6 +208,11 @@ namespace HPLStudio
             else
             {
                 System.IO.File.WriteAllText(FileName, TextEditor.Text);
+                if (FileName == $"{Application.StartupPath}/config.ini")
+                {
+                    LoadIniFile();
+                }
+
             }
             isFileNew = false;
         }
@@ -238,12 +246,12 @@ namespace HPLStudio
         private void SelectToolMenu( string name )
         {
             progString = name;
-            exeString = iniFile.GetString(name, "exe", "");
-            pathString = iniFile.GetString(name, "path", "");
-            helpSting = iniFile.GetString(name, "help", "");
-            processString = iniFile.GetString(name, "process", "");
-            defaultHplExtension = iniFile.GetString(name, "defaultExt", ".hpl");
-            fileExtensions = iniFile.GetString(name, "fileExts", "");
+            exeString = ConfigIniFile.GetString(name, "exe", "");
+            pathString = ConfigIniFile.GetString(name, "path", "");
+            helpSting = ConfigIniFile.GetString(name, "help", "");
+            processString = ConfigIniFile.GetString(name, "process", "");
+            defaultHplExtension = ConfigIniFile.GetString(name, "defaultExt", ".hpl");
+            fileExtensions = ConfigIniFile.GetString(name, "fileExts", "");
             if (fileExtensions == "")
                 fileExtensions = Resources.STR_FileFilters;
             else
@@ -254,7 +262,7 @@ namespace HPLStudio
                     fileExtensions = "HPM files|*.hpm|" + fileExtensions;
 
             }
-            hplSubDir = iniFile.GetString(name, "hplSubDir", "hpl");
+            hplSubDir = ConfigIniFile.GetString(name, "hplSubDir", "hpl");
             
 
             progDef = pathString + "/" + exeString;
@@ -266,7 +274,7 @@ namespace HPLStudio
                 item.Checked = item.Text == progString;
             }
 
-            iniFile.WriteValue("selected", "prog", name); 
+            ConfigIniFile.WriteValue("selected", "prog", name); 
         }
 
         private void toolSelect_Click(object sender, EventArgs e)
@@ -282,33 +290,39 @@ namespace HPLStudio
         [DllImport("user32.dll", CharSet = CharSet.Auto)]
         public static extern int GetSysColor(int nIndex);
 
-        private void Form1_Load(object sender, EventArgs e)
+        private void LoadIniFile()
         {
-            Text = Application.CompanyName + @" " + Application.ProductName + @" v." + Application.ProductVersion;
-            iniFile = new IniFile(Application.StartupPath + "/config.ini");
-            var sections = iniFile.GetSectionNames();
+            ConfigIniFile = new IniFile(Application.StartupPath + "/config.ini");
+            var sections = ConfigIniFile.GetSectionNames();
+            toolsMenuItem.DropDownItems.Clear();
             foreach (var section in sections)
             {
                 if (section.ToLower().Trim() != "selected")
                 {
                     try
                     {
-                        var program = iniFile.GetString(section, "path", "")
-                                      + "\\" + iniFile.GetString(section, "exe", "");
+                        var program = ConfigIniFile.GetString(section, "path", "")
+                                      + "\\" + ConfigIniFile.GetString(section, "exe", "");
                         program = Environment.ExpandEnvironmentVariables(program);
                         Image icon = Icon.ExtractAssociatedIcon(program)?.ToBitmap();
                         //ToolStripMenuItem item = new ToolStripMenuItem(section, icon, toolSelect_Click);
                         toolsMenuItem.DropDownItems.Add(section, icon, toolSelect_Click);
-                        
+
                     }
                     catch (Exception exception)
                     {
                         statusStrip1.Text = exception.ToString();
                     }
-                }               
+                }
             }
-            var def = iniFile.GetString("selected", "prog", "");
-            SelectToolMenu( def );
+            var def = ConfigIniFile.GetString("selected", "prog", "");
+            SelectToolMenu(def);
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            Text = Application.CompanyName + @" " + Application.ProductName + @" v." + Application.ProductVersion;
+            LoadIniFile();
 
             _paletteWindowsTextColor = SystemColors.WindowText;//  Color.FromArgb(GetSysColor((int)KnownColor.WindowText));
             _paletteWindowColor = SystemColors.Window; //Color.FromArgb(GetSysColor((int)KnownColor.Window));
@@ -321,11 +335,22 @@ namespace HPLStudio
             defaultHotkeysMapping.Add(Keys.Control | Keys.OemSemicolon | Keys.Shift, FCTBAction.CustomAction2);
             defaultHotkeysMapping.Add(Keys.Control | Keys.LButton, FCTBAction.CustomAction3);
 
-            var hk = iniFile.GetString("Hotkeys", "hotkeys", null);
+            var hk = ConfigIniFile.GetString("Hotkeys", "hotkeys", null);
             if (!string.IsNullOrEmpty(hk))
             {
                 defaultHotkeysMapping = HotkeysMapping.Parse(hk);
             }
+
+            Environment.SetEnvironmentVariable("WEBVIEW2_USER_DATA_FOLDER",
+                Environment.ExpandEnvironmentVariables($"%APPDATA%\\{Application.ProductName}"));
+
+            Config = ConfigurationManager.OpenExeConfiguration(Application.ExecutablePath);
+            ParsingInfo.AddGeneratedMacro = Config.AppSettings.Settings["ParsingInfo.AddGeneratedMacro"]?.Value.ToLower()  == "true";
+            addMacroToolStripMenuItem.Checked = ParsingInfo.AddGeneratedMacro;
+
+            ParsingInfo.AddDefs = Config.AppSettings.Settings["ParsingInfo.AddDefs"]?.Value.ToLower() == "true";
+            addDefineToolStripMenuItem.Checked = ParsingInfo.AddDefs;
+
         }
 
         private System.Diagnostics.Process _progerWindow = null;
@@ -791,7 +816,7 @@ namespace HPLStudio
                     }
                 }
                 defaultHotkeysMapping = form.GetHotkeys();
-                iniFile.WriteValue("Hotkeys", "hotkeys", defaultHotkeysMapping.ToString());
+                ConfigIniFile.WriteValue("Hotkeys", "hotkeys", defaultHotkeysMapping.ToString());
             }
         }
 
@@ -986,6 +1011,32 @@ namespace HPLStudio
         private void onlineHelpToolStripMenuItem_Click(object sender, EventArgs e)
         {
             HtmlHelp("https://github.com/eugenosm/HPL-Studio-NET/blob/master/HPL%20Studio%20NET/README.md");
+        }
+
+        private void добалятьВсеDefineToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            addDefineToolStripMenuItem.Checked = !addDefineToolStripMenuItem.Checked;
+            ParsingInfo.AddDefs = addDefineToolStripMenuItem.Checked;
+            WriteConfigValue("ParsingInfo.AddDefs", addDefineToolStripMenuItem.Checked ? "true" : "false");
+        }
+
+        private void addMacroToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            addMacroToolStripMenuItem.Checked = !addMacroToolStripMenuItem.Checked;
+            ParsingInfo.AddGeneratedMacro = addMacroToolStripMenuItem.Checked;
+            WriteConfigValue("ParsingInfo.AddGeneratedMacro", addDefineToolStripMenuItem.Checked ? "true" : "false");
+        }
+
+        public void WriteConfigValue(string key, string value)
+        {
+            Config.AppSettings.Settings.Remove(key);
+            Config.AppSettings.Settings.Add(key, value);
+            Config.Save(ConfigurationSaveMode.Minimal);
+        }
+
+        private void инструментыПрограмматораToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            OpenFile(Application.StartupPath + "/config.ini");
         }
     }
 
