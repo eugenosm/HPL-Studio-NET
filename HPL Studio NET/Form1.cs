@@ -91,8 +91,9 @@ namespace HPLStudio
             }
         }
 
-        private void OpenFile(string fileName)
+        private void OpenFile(string fileName, string encoding = null)
         {
+            var enc = Encoding.GetEncoding(encoding ?? "windows-1251");
             if (FindFileTab(fileName) is {} tab)
             {
                 tsFiles.SelectedItem = tab;
@@ -102,7 +103,7 @@ namespace HPLStudio
             {
                 CreateTab(fileName);
             }
-            TextEditor.Text = System.IO.File.ReadAllText(fileName);
+            TextEditor.Text = System.IO.File.ReadAllText(fileName, enc);
             //FileName = FileName;
             isFileNew = false;
         }
@@ -118,7 +119,7 @@ namespace HPLStudio
             openFileDialog1.FilterIndex = 1;
             if (DialogResult.OK == openFileDialog1.ShowDialog())
             {
-                OpenFile(openFileDialog1.FileName);
+                OpenFile(openFileDialog1.FileName, SelectedEncodingName);
                 _recentFileHandler.AddFile(openFileDialog1.FileName);
             }
         }
@@ -207,7 +208,8 @@ namespace HPLStudio
             }
             else
             {
-                System.IO.File.WriteAllText(FileName, TextEditor.Text);
+                var enc = Encoding.GetEncoding(SelectedEncodingName);
+                System.IO.File.WriteAllText(FileName, TextEditor.Text, enc);
                 if (FileName == $"{Application.StartupPath}/config.ini")
                 {
                     LoadIniFile();
@@ -237,7 +239,8 @@ namespace HPLStudio
             saveFileDialog1.FileName = fname;
             if (DialogResult.OK == saveFileDialog1.ShowDialog())
             {
-                System.IO.File.WriteAllText(saveFileDialog1.FileName, TextEditor.Text);
+                var enc = Encoding.GetEncoding(SelectedEncodingName);
+                System.IO.File.WriteAllText(saveFileDialog1.FileName, TextEditor.Text, enc);
                 isFileNew = false;
 
             }
@@ -319,10 +322,28 @@ namespace HPLStudio
             SelectToolMenu(def);
         }
 
+        private void Create_EncodingsMenuDropDownList()
+        {
+            encodingToolStripMenuItem.DropDownItems.Clear();
+            foreach (var encoding in Encoding.GetEncodings())
+            {
+                var text = $"{encoding.CodePage:D5} {encoding.Name} - {encoding.DisplayName}";
+                var item = encodingToolStripMenuItem.DropDownItems.Add(text);
+                item.Name = encoding.Name;
+                item.Tag = encoding;
+            }
+        }
+
+
+        public EncodingInfo SelectedEncodingInfo => (encodingToolStripMenuItem.Tag as EncodingInfo);
+        public string SelectedEncodingName => SelectedEncodingInfo?.Name ?? "windows-1251";
+
+
         private void Form1_Load(object sender, EventArgs e)
         {
             Text = Application.CompanyName + @" " + Application.ProductName + @" v." + Application.ProductVersion;
             LoadIniFile();
+            Create_EncodingsMenuDropDownList();
 
             _paletteWindowsTextColor = SystemColors.WindowText;//  Color.FromArgb(GetSysColor((int)KnownColor.WindowText));
             _paletteWindowColor = SystemColors.Window; //Color.FromArgb(GetSysColor((int)KnownColor.Window));
@@ -350,6 +371,23 @@ namespace HPLStudio
 
             ParsingInfo.AddDefs = Config.AppSettings.Settings["ParsingInfo.AddDefs"]?.Value.ToLower() == "true";
             addDefineToolStripMenuItem.Checked = ParsingInfo.AddDefs;
+
+            var encoding = Config.AppSettings.Settings["default-coding"]?.Value.ToLower();
+            if (!string.IsNullOrEmpty(encoding))
+            {
+                var encMenuItem = encodingToolStripMenuItem.DropDownItems.Find(encoding, false);
+                if (encMenuItem is {Length: > 0})
+                {
+                    var ei = (encMenuItem[0].Tag as EncodingInfo);
+                    encodingToolStripMenuItem.Text =
+                        string.Format(Resources.STR_encodingMenu, ei?.Name);
+                    encodingToolStripMenuItem.Tag = ei;
+
+                }
+
+        }
+
+
 
         }
 
@@ -447,7 +485,9 @@ namespace HPLStudio
                 var workDir = System.IO.Path.GetDirectoryName(FileName);
                 var justFileName = System.IO.Path.GetFileNameWithoutExtension(FileName);
                 var resultFileName = workDir + "/" + justFileName + defaultHplExtension;
-                System.IO.File.WriteAllLines(resultFileName, dest);  //? 
+                var enc = Encoding.GetEncoding(SelectedEncodingName);
+
+                System.IO.File.WriteAllLines(resultFileName, dest, enc);  //? 
                 var fileTab = FindFileTab(resultFileName);
                 
                 if (fileTab is null)
@@ -507,7 +547,7 @@ namespace HPLStudio
         private void recentFilesMenuItem_DropDownItemClicked(object sender, ToolStripItemClickedEventArgs e)
         {
             var fmi = (RecentFileHandler.FileMenuItem)e.ClickedItem;
-            OpenFile(fmi.FileName);
+            OpenFile(fmi.FileName, SelectedEncodingName);
         }
 
         public class TbInfo
@@ -551,7 +591,8 @@ namespace HPLStudio
             {
                 if (tab.Tag is string name)
                 {
-                    System.IO.File.WriteAllText(name, tb.Text);
+                    var enc = Encoding.GetEncoding(SelectedEncodingName);
+                    System.IO.File.WriteAllText(name, tb.Text, enc);
                     tb.IsChanged = false;
                 }
             }
@@ -1037,6 +1078,15 @@ namespace HPLStudio
         private void инструментыПрограмматораToolStripMenuItem_Click(object sender, EventArgs e)
         {
             OpenFile(Application.StartupPath + "/config.ini");
+        }
+        
+        private void encodingToolStripMenuItem_DropDownItemClicked(object sender, ToolStripItemClickedEventArgs e)
+        {
+            encodingToolStripMenuItem.Tag = e.ClickedItem.Tag;
+            var encName = (e.ClickedItem?.Tag as EncodingInfo)?.Name;
+            encodingToolStripMenuItem.Text =
+                string.Format(Resources.STR_encodingMenu, encName);
+            WriteConfigValue("default-coding", encName);
         }
     }
 

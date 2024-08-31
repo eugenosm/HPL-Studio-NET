@@ -59,6 +59,7 @@ namespace HPLStudio
         <body>
             " + source + @"
             <script src=""Resources/prism.js""></script>
+            <script src=""Resources/hpm.js""></script>
         </body>
     </html>
 ";

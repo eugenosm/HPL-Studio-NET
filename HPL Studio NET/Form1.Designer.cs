@@ -48,6 +48,12 @@ namespace HPLStudio
             this.PreprocessorMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.ToPassToMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolsMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.настройкиToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.горячиеКлавишиToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.инструментыПрограмматораToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripMenuItem3 = new System.Windows.Forms.ToolStripSeparator();
+            this.addDefineToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.addMacroToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.helpMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.progHelpMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.selectedToolHelpMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -68,12 +74,8 @@ namespace HPLStudio
             this.printDialog1 = new System.Windows.Forms.PrintDialog();
             this.tsFiles = new FarsiLibrary.Win.FATabStrip();
             this.faTabStripItem1 = new FarsiLibrary.Win.FATabStripItem();
-            this.настройкиToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.горячиеКлавишиToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.toolStripMenuItem3 = new System.Windows.Forms.ToolStripSeparator();
-            this.addDefineToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.addMacroToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.инструментыПрограмматораToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripMenuItem4 = new System.Windows.Forms.ToolStripSeparator();
+            this.encodingToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             this.ToolStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.tsFiles)).BeginInit();
@@ -205,6 +207,53 @@ namespace HPLStudio
             this.toolsMenuItem.Size = new System.Drawing.Size(95, 20);
             this.toolsMenuItem.Text = "Инструменты";
             this.toolsMenuItem.Click += new System.EventHandler(this.toolsMenuItem_Click);
+            // 
+            // настройкиToolStripMenuItem
+            // 
+            this.настройкиToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.горячиеКлавишиToolStripMenuItem,
+            this.инструментыПрограмматораToolStripMenuItem,
+            this.toolStripMenuItem3,
+            this.addDefineToolStripMenuItem,
+            this.addMacroToolStripMenuItem,
+            this.toolStripMenuItem4,
+            this.encodingToolStripMenuItem});
+            this.настройкиToolStripMenuItem.Name = "настройкиToolStripMenuItem";
+            this.настройкиToolStripMenuItem.Size = new System.Drawing.Size(79, 20);
+            this.настройкиToolStripMenuItem.Text = "Настройки";
+            // 
+            // горячиеКлавишиToolStripMenuItem
+            // 
+            this.горячиеКлавишиToolStripMenuItem.Name = "горячиеКлавишиToolStripMenuItem";
+            this.горячиеКлавишиToolStripMenuItem.Size = new System.Drawing.Size(241, 22);
+            this.горячиеКлавишиToolStripMenuItem.Text = "Горячие клавиши";
+            this.горячиеКлавишиToolStripMenuItem.Click += new System.EventHandler(this.changeHotKeysButton_Click);
+            // 
+            // инструментыПрограмматораToolStripMenuItem
+            // 
+            this.инструментыПрограмматораToolStripMenuItem.Name = "инструментыПрограмматораToolStripMenuItem";
+            this.инструментыПрограмматораToolStripMenuItem.Size = new System.Drawing.Size(241, 22);
+            this.инструментыПрограмматораToolStripMenuItem.Text = "Инструменты программатора";
+            this.инструментыПрограмматораToolStripMenuItem.Click += new System.EventHandler(this.инструментыПрограмматораToolStripMenuItem_Click);
+            // 
+            // toolStripMenuItem3
+            // 
+            this.toolStripMenuItem3.Name = "toolStripMenuItem3";
+            this.toolStripMenuItem3.Size = new System.Drawing.Size(238, 6);
+            // 
+            // addDefineToolStripMenuItem
+            // 
+            this.addDefineToolStripMenuItem.Name = "addDefineToolStripMenuItem";
+            this.addDefineToolStripMenuItem.Size = new System.Drawing.Size(241, 22);
+            this.addDefineToolStripMenuItem.Text = "Добалять все значения";
+            this.addDefineToolStripMenuItem.Click += new System.EventHandler(this.добалятьВсеDefineToolStripMenuItem_Click);
+            // 
+            // addMacroToolStripMenuItem
+            // 
+            this.addMacroToolStripMenuItem.Name = "addMacroToolStripMenuItem";
+            this.addMacroToolStripMenuItem.Size = new System.Drawing.Size(241, 22);
+            this.addMacroToolStripMenuItem.Text = "Добавлять все макросы";
+            this.addMacroToolStripMenuItem.Click += new System.EventHandler(this.addMacroToolStripMenuItem_Click);
             // 
             // helpMenuItem
             // 
@@ -383,50 +432,17 @@ namespace HPLStudio
             this.faTabStripItem1.TabIndex = 0;
             this.faTabStripItem1.Title = "TabStrip Page 1";
             // 
-            // настройкиToolStripMenuItem
+            // toolStripMenuItem4
             // 
-            this.настройкиToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.горячиеКлавишиToolStripMenuItem,
-            this.инструментыПрограмматораToolStripMenuItem,
-            this.toolStripMenuItem3,
-            this.addDefineToolStripMenuItem,
-            this.addMacroToolStripMenuItem});
-            this.настройкиToolStripMenuItem.Name = "настройкиToolStripMenuItem";
-            this.настройкиToolStripMenuItem.Size = new System.Drawing.Size(79, 20);
-            this.настройкиToolStripMenuItem.Text = "Настройки";
+            this.toolStripMenuItem4.Name = "toolStripMenuItem4";
+            this.toolStripMenuItem4.Size = new System.Drawing.Size(238, 6);
             // 
-            // горячиеКлавишиToolStripMenuItem
+            // encodingToolStripMenuItem
             // 
-            this.горячиеКлавишиToolStripMenuItem.Name = "горячиеКлавишиToolStripMenuItem";
-            this.горячиеКлавишиToolStripMenuItem.Size = new System.Drawing.Size(241, 22);
-            this.горячиеКлавишиToolStripMenuItem.Text = "Горячие клавиши";
-            this.горячиеКлавишиToolStripMenuItem.Click += new System.EventHandler(this.changeHotKeysButton_Click);
-            // 
-            // toolStripMenuItem3
-            // 
-            this.toolStripMenuItem3.Name = "toolStripMenuItem3";
-            this.toolStripMenuItem3.Size = new System.Drawing.Size(238, 6);
-            // 
-            // addDefineToolStripMenuItem
-            // 
-            this.addDefineToolStripMenuItem.Name = "addDefineToolStripMenuItem";
-            this.addDefineToolStripMenuItem.Size = new System.Drawing.Size(241, 22);
-            this.addDefineToolStripMenuItem.Text = "Добалять все значения";
-            this.addDefineToolStripMenuItem.Click += new System.EventHandler(this.добалятьВсеDefineToolStripMenuItem_Click);
-            // 
-            // addMacroToolStripMenuItem
-            // 
-            this.addMacroToolStripMenuItem.Name = "addMacroToolStripMenuItem";
-            this.addMacroToolStripMenuItem.Size = new System.Drawing.Size(241, 22);
-            this.addMacroToolStripMenuItem.Text = "Добавлять все макросы";
-            this.addMacroToolStripMenuItem.Click += new System.EventHandler(this.addMacroToolStripMenuItem_Click);
-            // 
-            // инструментыПрограмматораToolStripMenuItem
-            // 
-            this.инструментыПрограмматораToolStripMenuItem.Name = "инструментыПрограмматораToolStripMenuItem";
-            this.инструментыПрограмматораToolStripMenuItem.Size = new System.Drawing.Size(241, 22);
-            this.инструментыПрограмматораToolStripMenuItem.Text = "Инструменты программатора";
-            this.инструментыПрограмматораToolStripMenuItem.Click += new System.EventHandler(this.инструментыПрограмматораToolStripMenuItem_Click);
+            this.encodingToolStripMenuItem.Name = "encodingToolStripMenuItem";
+            this.encodingToolStripMenuItem.Size = new System.Drawing.Size(241, 22);
+            this.encodingToolStripMenuItem.Text = "Кодировка";
+            this.encodingToolStripMenuItem.DropDownItemClicked += new System.Windows.Forms.ToolStripItemClickedEventHandler(this.encodingToolStripMenuItem_DropDownItemClicked);
             // 
             // Form1
             // 
@@ -496,6 +512,8 @@ namespace HPLStudio
         private System.Windows.Forms.ToolStripMenuItem addDefineToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem addMacroToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem инструментыПрограмматораToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator toolStripMenuItem4;
+        private System.Windows.Forms.ToolStripMenuItem encodingToolStripMenuItem;
     }
 }
 
