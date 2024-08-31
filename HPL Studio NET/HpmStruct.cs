@@ -18,35 +18,11 @@ namespace HPLStudio
             new Regex(@"#struct\s*(?<structDef>.*?)(?<comment>\s*;[\w\t ~!@#$%^&*()\-+=`""""\\/|№?\{\[\]\}':;<>,.]*)?\n(?<structBody>.*?)#ends"
                 , RegexOptions.Singleline | RegexOptions.Compiled);
 
-        // private static readonly Regex FieldRe =
-        //     new Regex(
-        //         @"\s*(?<field>\w+(\s*=\s*\d+)?)(?<comment>\s*;[\w\t ~!@#$%^&*()\-+=`""""""""\\/|№?\{\[\]\}':;<>,.]*)?\n"
-        //         , RegexOptions.Singleline | RegexOptions.Compiled);
 
         private static readonly Regex FieldRe =
             new Regex(
                 @"\s*(?<field>\w+(\s*=\s*\d+)?)\s*(?<comment>;.*)?"
                 , RegexOptions.Singleline | RegexOptions.Compiled);
-
-        /*
-        def.:    #struct TEST
-                 ...
-                 F2=5
-                 ...
-                 #ends
-
-        source:    R0=Test.F2
-        middle:    R0=R8{_get_set(Test_F2)}
-        regex:     GetSetRe ->
-                   Match1           102-126	    R0=R8{_get_set(Test_F2)}
-                   Group1           107-126	    {_get_set(Test_F2)}
-                   Group    get     102-126	    R0=R8{_get_set(Test_F2)}
-                   Group    dest    102-104	    R0
-                   Group    reg     105-107	    R8
-                   Group    field   117-124	    Test_F2
-
-        */
-
 
         private static string GetSetEvaluator(Match x)
         {
@@ -62,7 +38,6 @@ namespace HPLStudio
                 var get = getter.Apply($"{getterName}(R0)");
                 var setterName = $"_set_{x.Groups["fieldd"].Value}";
                 var setter = Macro.GlobalStorage[setterName];
-                var arg = x.Groups["val"].Value;
                 var set = setter.Apply($"{setterName}(R0)").Replace("R0=R0, ", "");
                 return $"{get}, {set}";
 
@@ -83,8 +58,9 @@ namespace HPLStudio
                 var setter = Macro.GlobalStorage[setterName];
                 var arg = x.Groups["val"].Value;
                 //var cmt = $"; {x.Groups[8].Value} = {arg}\n";
+                // R1=R0,R8=&0xFFFFFFFFFFFFF01F, R0=R1, R0=<<0x5, R0=&0xFE0, R8=|R0
                 return arg == "R0"  
-                    ? setter.Apply($"R1=R0,{setterName}(R1)")
+                    ? setter.Apply($"R1=R0, {setterName}(R1), R0=R1").Replace("R0=R1, ", "")
                     : setter.Apply($"{setterName}({arg})");
             }
             return x.Value;
@@ -229,6 +205,22 @@ namespace HPLStudio
                                 }
                             }
                         }
+
+                        if (Preprocessor.CheckIdentifierIsFree(ref vars, identifierHead))
+                        {
+                            Preprocessor.PushDef(ref vars, identifierHead, valueHeader);
+                        }
+                        else
+                        {
+                            (line, col) = Preprocessor.FindLineNoInBlob(source, x.Index);
+                            error = new ErrorRec(ErrorRec.ErrCodes.EcErrorIdentifierAlreadyDefined, line, "")
+                            {
+                                Info = identifierHead
+                            };
+                            return x.Value;
+                            
+                        }
+
                         //result.Add(";" + line);
                         //result.Add("");
 
