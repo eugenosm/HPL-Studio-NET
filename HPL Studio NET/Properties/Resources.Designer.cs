@@ -266,6 +266,15 @@ namespace HPLStudio.Properties {
         }
         
         /// <summary>
+        ///   Ищет локализованную строку, похожую на Кодировка ({0}).
+        /// </summary>
+        internal static string STR_encodingMenu {
+            get {
+                return ResourceManager.GetString("STR_encodingMenu", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Ищет локализованную строку, похожую на HPM files|*.hpm|HPL files|*.hpl|Orange 4, HPL files|*.hp4|Orange 5, HPL files|*.hp5|HPF files|*.hpf|Все файлы|*.*.
         /// </summary>
         internal static string STR_FileFilters {

@@ -211,4 +211,7 @@
   <data name="STR_HtmlTail" xml:space="preserve">
     <value>"  &lt;/body&gt;\r\n&lt;/html&gt;"</value>
   </data>
+  <data name="STR_encodingMenu" xml:space="preserve">
+	  <value>Кодировка ({0})</value>
+  </data>
 </root>
