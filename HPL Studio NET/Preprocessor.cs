@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using Markdig.Helpers;
 
 
 namespace HPLStudio
@@ -70,6 +71,9 @@ namespace HPLStudio
 
     internal class Preprocessor
     {
+        private static Regex ReW = new Regex(@"\w", RegexOptions.Compiled);
+        public static bool CheckIfWordSymbol(char c) => ReW.Match($"{c}").Success;
+
         public static readonly string[] CrLfSeparators = new string[] {Environment.NewLine, "\n", "\r"};
 
         public static KeyValList.KeyValList Variables;
@@ -410,6 +414,14 @@ namespace HPLStudio
         }
 
 
+
+        private static string[] varReplacementReTemplates =
+        {
+            $@"{0}",
+            $@"{0}\b",
+            $@"\b{0}", 
+            $@"\b{0}\b"
+        };
         
         public static ErrorRec Compile(ref List<string> source, out string[] dest, KeyValList.KeyValList vars = null)
         {
@@ -466,8 +478,23 @@ namespace HPLStudio
             foreach (var kv in vars.List)
             {
                 if(kv.Key == kv.Value) continue;
+                var mode = CheckIfWordSymbol(kv.Key[0]) ? 2 : 0;
+                var kl = kv.Key.Length;
+                if (kl > 1)
+                    mode += CheckIfWordSymbol(kv.Key[kl - 1]) ? 1 : 0;
+                else
+                    mode += (mode >> 1);
 
-                var re = new Regex($@"\b{Regex.Escape(kv.Key)}\b", RegexOptions.Compiled | RegexOptions.Singleline);
+                //var re = new Regex(string.Format(varReplacementReTemplates[mode], kv.Key), 
+                //    RegexOptions.Compiled | RegexOptions.Singleline);
+                var re = mode switch
+                {
+                    3 => new Regex($@"\b{Regex.Escape(kv.Key)}\b", RegexOptions.Compiled | RegexOptions.Singleline),
+                    2 => new Regex($@"\b{Regex.Escape(kv.Key)}", RegexOptions.Compiled | RegexOptions.Singleline),
+                    1 => new Regex($@"{Regex.Escape(kv.Key)}\b", RegexOptions.Compiled | RegexOptions.Singleline),
+                    _ => new Regex($@"{Regex.Escape(kv.Key)}", RegexOptions.Compiled | RegexOptions.Singleline)
+                };
+
                 implementation = re.Replace(implementation, x => kv.Value);
             }
 

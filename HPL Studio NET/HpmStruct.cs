@@ -57,8 +57,6 @@ namespace HPLStudio
                 var setterName = $"_set_{x.Groups["field"].Value}";
                 var setter = Macro.GlobalStorage[setterName];
                 var arg = x.Groups["val"].Value;
-                //var cmt = $"; {x.Groups[8].Value} = {arg}\n";
-                // R1=R0,R8=&0xFFFFFFFFFFFFF01F, R0=R1, R0=<<0x5, R0=&0xFE0, R8=|R0
                 return arg == "R0"  
                     ? setter.Apply($"R1=R0, {setterName}(R1), R0=R1").Replace("R0=R1, ", "")
                     : setter.Apply($"{setterName}({arg})");
@@ -105,19 +103,19 @@ namespace HPLStudio
                     error = new ErrorRec(ErrorRec.ErrCodes.EcErrorInDefineExpression, line, "");
                     return x.Value;
                 }
-                var identifierHead = parsedLine[0].Trim();
+                var structIdentifier = parsedLine[0].Trim();
                 var bitPos = 0;
-                var valueHeader = parsedLine[1].Trim();
-                var isArray = valueHeader[0] == '@';
+                var structRegister = parsedLine[1].Trim();
+                var isArray = structRegister[0] == '@';
 
                 /*
                  * setter => _set_Struct_Field(R0) => Struct.Field = R0;
                  * getter => _get_Struct_field() => R0=(Struct.Field)
                  *
                  */
-                if (Preprocessor.CheckIdentifierIsFree(ref vars, identifierHead))
+                if (Preprocessor.CheckIdentifierIsFree(ref vars, structIdentifier))
                 {
-                    if (!Preprocessor.CheckPrevDefined(ref vars, identifierHead))
+                    if (!Preprocessor.CheckPrevDefined(ref vars, structIdentifier))
                     {
                         var hdrLen = x.Groups["structBody"].Index - x.Index;
                         var structBody = x.Groups["structBody"].Value.Split(
@@ -138,13 +136,12 @@ namespace HPLStudio
                                 return x.Value;
                             }
 
-//                            result.Add($"; {fieldDefStr}");
-
                             var fieldDef = fieldDefMatch.Groups["field"].Value;
                             var parsedField = fieldDef.Split('=');
 
                             string identifier;
                             string value;
+                            string fieldGetSetPlaceholder = null;
 
                             var fieldSize = (parsedField.Length > 1)
                                 ? int.TryParse(parsedField[1].Trim(), out var fs) ? fs : -1
@@ -153,34 +150,32 @@ namespace HPLStudio
                             if (isArray || fieldSize != 1)
                             {
                                 var aStructFieldName = parsedField[0].Trim();
-                                identifier = identifierHead + "." + aStructFieldName;
+                                identifier = structIdentifier + "." + aStructFieldName;
                                 if (fieldSize is < 1 or > 32)
                                 {
                                     error = new ErrorRec(ErrorRec.ErrCodes.EcErrorInParameters, line, "");
                                     return x.Value;
                                 }
                                 var field = (isArray)
-                                    ? new ArrStructField(valueHeader, bitPos, fieldSize)
-                                    : new StructField(valueHeader, bitPos, fieldSize);
+                                    ? new ArrStructField(structRegister, bitPos, fieldSize)
+                                    : new StructField(structRegister, bitPos, fieldSize);
 
-                                AddFieldMacro($"_set_{identifierHead}_{aStructFieldName}(arg)", field, field.Setter);
-                                AddFieldMacro($"_get_{identifierHead}_{aStructFieldName}(dst)", field, field.Getter);
-                                value = $"{{_get_set({identifierHead}_{aStructFieldName})}}";
-                                Preprocessor.PushDef(ref vars, value, value);
+                                AddFieldMacro($"_set_{structIdentifier}_{aStructFieldName}(arg)", field, field.Setter);
+                                AddFieldMacro($"_get_{structIdentifier}_{aStructFieldName}(dst)", field, field.Getter);
+                                value = $"{{_get_set({structIdentifier}_{aStructFieldName})}}";
+                                    //Preprocessor.PushDef(ref vars, value, value);
                                 bitPos += fieldSize;
                             }
                             else
                             {
-                                identifier = identifierHead + "." + fieldDef.Trim();
+                                identifier = structIdentifier + "." + fieldDef.Trim();
                                 value = $"[{bitPos}]";
                                 bitPos++;
                             }
 
                             if (Preprocessor.CheckIdentifierIsFree(ref vars, identifier))
                             {
-
-                                Preprocessor.PushDef(ref vars, identifier, valueHeader + value);
-                                //result.Add("; " + fieldDefStr);
+                                Preprocessor.PushDef(ref vars, identifier, structRegister + value);
                             }
                             else
                             {
@@ -199,37 +194,33 @@ namespace HPLStudio
                                     var ident = identifier + $"[{fieldBit}]";
                                     if (Preprocessor.CheckIdentifierIsFree(ref vars, ident))
                                     {
-                                        Preprocessor.PushDef(ref vars, ident, valueHeader + regBit);
+                                        Preprocessor.PushDef(ref vars, ident, structRegister + regBit);
                                     }
 
                                 }
                             }
                         }
 
-                        if (Preprocessor.CheckIdentifierIsFree(ref vars, identifierHead))
+                        if (Preprocessor.CheckIdentifierIsFree(ref vars, structIdentifier))
                         {
-                            Preprocessor.PushDef(ref vars, identifierHead, valueHeader);
+                            Preprocessor.PushDef(ref vars, structIdentifier, structRegister);
                         }
                         else
                         {
                             (line, col) = Preprocessor.FindLineNoInBlob(source, x.Index);
                             error = new ErrorRec(ErrorRec.ErrCodes.EcErrorIdentifierAlreadyDefined, line, "")
                             {
-                                Info = identifierHead
+                                Info = structIdentifier
                             };
                             return x.Value;
                             
                         }
 
-                        //result.Add(";" + line);
-                        //result.Add("");
 
                         (error, macroCommented) = Macro.ProcessMacroDefs(string.Join("\n", structGetSetMacroDefs));
                         macroCommentedBuilder.Append("\n");
                         macroCommentedBuilder.Append(macroCommented);
                         structGetSetMacroDefs.Clear();
-                        // result.AddRange(macroCommented.Split('\n'));
-                        // return string.Join("\n", result);
 
                         return Preprocessor.CommentAllLines(x.Value);
                     }
