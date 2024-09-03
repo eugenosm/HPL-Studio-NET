@@ -93,6 +93,11 @@
   <ItemGroup>
     <EmbeddedResource Include="FATabStrip.bmp" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="FCTB">
+      <Version>2.16.24</Version>
+    </PackageReference>
+  </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
