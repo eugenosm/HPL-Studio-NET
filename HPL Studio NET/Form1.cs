@@ -45,7 +45,7 @@ namespace HPLStudio
         public AboutForm AboutDlgForm;
         public BrowserForm Browser;
         public Configuration Config;
-
+        public AcroPDFForm PdfForm;
 
 
         private const int SW_MAXIMIZE = 3;
@@ -250,7 +250,7 @@ namespace HPLStudio
         {
             progString = name;
             exeString = ConfigIniFile.GetString(name, "exe", "");
-            pathString = ConfigIniFile.GetString(name, "path", "");
+            pathString =  Environment.ExpandEnvironmentVariables(ConfigIniFile.GetString(name, "path", ""));
             helpSting = ConfigIniFile.GetString(name, "help", "");
             processString = ConfigIniFile.GetString(name, "process", "");
             defaultHplExtension = ConfigIniFile.GetString(name, "defaultExt", ".hpl");
@@ -334,33 +334,79 @@ namespace HPLStudio
             }
         }
 
+        private void ApplyEncoding(string encoding)
+        {
+            if (!string.IsNullOrEmpty(encoding))
+            {
+                var encMenuItem = encodingToolStripMenuItem.DropDownItems.Find(encoding, false);
+                if (encMenuItem is { Length: > 0 })
+                {
+                    var ei = (encMenuItem[0].Tag as EncodingInfo);
+                    encodingToolStripMenuItem.Text =
+                        string.Format(Resources.STR_encodingMenu, ei?.Name);
+                    encodingToolStripMenuItem.Tag = ei;
+
+                }
+            }
+        }
 
         public EncodingInfo SelectedEncodingInfo => (encodingToolStripMenuItem.Tag as EncodingInfo);
         public string SelectedEncodingName => SelectedEncodingInfo?.Name ?? "windows-1251";
 
 
-        private void Form1_Load(object sender, EventArgs e)
+        private void InitHotKeys()
         {
-            Text = Application.CompanyName + @" " + Application.ProductName + @" v." + Application.ProductVersion;
-            LoadIniFile();
-            Create_EncodingsMenuDropDownList();
-
-            _paletteWindowsTextColor = SystemColors.WindowText;//  Color.FromArgb(GetSysColor((int)KnownColor.WindowText));
-            _paletteWindowColor = SystemColors.Window; //Color.FromArgb(GetSysColor((int)KnownColor.Window));
-            _paletteHplWindowColor = Color.FromArgb(215, 228, 242);
-            _paletteHpmWindowColor = Color.FromArgb(255, 255, 210);
-
             defaultHotkeysMapping = new HotkeysMapping();
             defaultHotkeysMapping.InitDefault();
             defaultHotkeysMapping.Add(Keys.Control | Keys.OemSemicolon, FCTBAction.CustomAction1);
             defaultHotkeysMapping.Add(Keys.Control | Keys.OemSemicolon | Keys.Shift, FCTBAction.CustomAction2);
             defaultHotkeysMapping.Add(Keys.Control | Keys.LButton, FCTBAction.CustomAction3);
 
-            var hk = ConfigIniFile.GetString("Hotkeys", "hotkeys", null);
+            LoadHotKeys();
+        }
+
+        private void LoadHotKeys()
+        {
+            string hk = null;
+            if (ConfigIniFile.GetSectionNames().Contains("Hotkeys"))
+            {
+                hk = ConfigIniFile.GetString("Hotkeys", "hotkeys", null);
+                if (string.IsNullOrEmpty(hk))
+                {
+                    hk = string.Join(", ",
+                        ConfigIniFile.GetSectionValues("Hotkeys")
+                            .Select((x) => $"{x.Key}={x.Value}"));
+                }
+
+            }
+            else
+            {
+                hk = string.Join(", ", 
+                    Config.AppSettings.Settings.AllKeys.Where((x) => x.StartsWith("HotKeys."))
+                        .Select((x) => $"{x.Substring("HotKeys.".Length)}={Config.AppSettings.Settings[x].Value}"));
+            }
+
             if (!string.IsNullOrEmpty(hk))
             {
                 defaultHotkeysMapping = HotkeysMapping.Parse(hk);
             }
+        }
+
+        private void InitPalette()
+        {
+            _paletteWindowsTextColor = SystemColors.WindowText;//  Color.FromArgb(GetSysColor((int)KnownColor.WindowText));
+            _paletteWindowColor = SystemColors.Window; //Color.FromArgb(GetSysColor((int)KnownColor.Window));
+            _paletteHplWindowColor = Color.FromArgb(215, 228, 242);
+            _paletteHpmWindowColor = Color.FromArgb(255, 255, 210);
+
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            Text = Application.CompanyName + @" " + Application.ProductName + @" v." + Application.ProductVersion;
+            LoadIniFile();
+
+            InitPalette();
 
             Environment.SetEnvironmentVariable("WEBVIEW2_USER_DATA_FOLDER",
                 Environment.ExpandEnvironmentVariables($"%APPDATA%\\{Application.ProductName}"));
@@ -372,22 +418,11 @@ namespace HPLStudio
             ParsingInfo.AddDefs = Config.AppSettings.Settings["ParsingInfo.AddDefs"]?.Value.ToLower() == "true";
             addDefineToolStripMenuItem.Checked = ParsingInfo.AddDefs;
 
+            Create_EncodingsMenuDropDownList();
             var encoding = Config.AppSettings.Settings["default-coding"]?.Value.ToLower();
-            if (!string.IsNullOrEmpty(encoding))
-            {
-                var encMenuItem = encodingToolStripMenuItem.DropDownItems.Find(encoding, false);
-                if (encMenuItem is {Length: > 0})
-                {
-                    var ei = (encMenuItem[0].Tag as EncodingInfo);
-                    encodingToolStripMenuItem.Text =
-                        string.Format(Resources.STR_encodingMenu, ei?.Name);
-                    encodingToolStripMenuItem.Tag = ei;
+            ApplyEncoding(encoding);
 
-                }
-
-        }
-
-
+            InitHotKeys();
 
         }
 
@@ -403,10 +438,11 @@ namespace HPLStudio
         private void ToPassToMenuItem_Click(object sender, EventArgs e)
         {
             PreprocessorMenuItem_Click(sender, e);
-            var workDir = System.IO.Path.GetDirectoryName(FileName);
-            var justFileName = System.IO.Path.GetFileNameWithoutExtension(FileName);
+            var workDir = Path.GetDirectoryName(FileName);
+            var justFileName = Path.GetFileNameWithoutExtension(FileName);
+
             if (workDir != null && workDir.IndexOf(pathString, StringComparison.Ordinal) < 0)
-            {
+            {  // Если редактируемый файл не в папке программатора, копируем его туда
                 var resultFileName = pathString + "\\" + hplSubDir + "\\" + justFileName + defaultHplExtension;
                 
                 var fileTab = FindFileTab($"{workDir}/{justFileName}{defaultHplExtension}")?.Controls[0];
@@ -418,14 +454,14 @@ namespace HPLStudio
 
 //            saveAsMenuItem_Click(sender, e);
             var passTo = pathString + '\\' + exeString;
-            if (!System.IO.File.Exists(passTo))
+            if (!File.Exists(passTo))
             {
                 MessageBox.Show($@"File: '{passTo}' not found!", @"Incorrect Tool Path", MessageBoxButtons.OK);
                 return;
             }
 
             if (_progerWindow is {HasExited: false} && _progerWindow.ProcessName != "" && passTo == _progerWindowSoftware )
-            {
+            {   // Если ПО программатора уже запущено, активируем его окно
                 ActivateApp(_progerWindow);
             }
             else
@@ -482,12 +518,12 @@ namespace HPLStudio
             var result =  Preprocessor.Compile(ref source, out var dest);
             if (result == null || result.Code == ErrorRec.ErrCodes.EcOk)
             {
-                var workDir = System.IO.Path.GetDirectoryName(FileName);
-                var justFileName = System.IO.Path.GetFileNameWithoutExtension(FileName);
+                var workDir = Path.GetDirectoryName(FileName);
+                var justFileName = Path.GetFileNameWithoutExtension(FileName);
                 var resultFileName = workDir + "/" + justFileName + defaultHplExtension;
                 var enc = Encoding.GetEncoding(SelectedEncodingName);
 
-                System.IO.File.WriteAllLines(resultFileName, dest, enc);  //? 
+                File.WriteAllLines(resultFileName, dest, enc);  //? 
                 var fileTab = FindFileTab(resultFileName);
                 
                 if (fileTab is null)
@@ -529,6 +565,7 @@ namespace HPLStudio
                     MarkDownHelp(Environment.ExpandEnvironmentVariables(pathString + "/" + helpSting));
                     break;
                 case ".pdf":
+                    AcroPDFForm.ShowFile(Environment.ExpandEnvironmentVariables(pathString + "/" + helpSting));
                     break;
                 case ".html":
                     var helpUri = (helpSting.StartsWith("http"))
@@ -857,7 +894,21 @@ namespace HPLStudio
                     }
                 }
                 defaultHotkeysMapping = form.GetHotkeys();
-                ConfigIniFile.WriteValue("Hotkeys", "hotkeys", defaultHotkeysMapping.ToString());
+                var writeToIni = ConfigIniFile.GetSectionNames().Contains("Hotkeys");
+                foreach (var record in defaultHotkeysMapping.ToString().Split(','))
+                {
+                    var kv = record.Split('=');
+                    if(writeToIni)
+                        ConfigIniFile.WriteValue("Hotkeys", kv[0].Trim(), kv[1].Trim());
+
+                    SetConfigValue($"HotKeys.{kv[0].Trim()}", kv[1].Trim());
+                }
+
+                Config.Save(ConfigurationSaveMode.Minimal);
+
+                //
+                //
+                // ConfigIniFile.WriteValue("Hotkeys", "hotkeys", defaultHotkeysMapping.ToString());
             }
         }
 
@@ -1000,8 +1051,7 @@ namespace HPLStudio
 
         private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            HtmlHelp("https://www.whatsmybrowser.org");
-            //AboutDlgForm.ShowDialog();
+            AboutDlgForm.ShowDialog();
         }
 
         internal void HtmlHelp(string pathOrUri)
@@ -1054,7 +1104,7 @@ namespace HPLStudio
             HtmlHelp("https://github.com/eugenosm/HPL-Studio-NET/blob/master/HPL%20Studio%20NET/README.md");
         }
 
-        private void добалятьВсеDefineToolStripMenuItem_Click(object sender, EventArgs e)
+        private void addHiddenDefineToolStripMenuItem_Click(object sender, EventArgs e)
         {
             addDefineToolStripMenuItem.Checked = !addDefineToolStripMenuItem.Checked;
             ParsingInfo.AddDefs = addDefineToolStripMenuItem.Checked;
@@ -1068,6 +1118,12 @@ namespace HPLStudio
             WriteConfigValue("ParsingInfo.AddGeneratedMacro", addDefineToolStripMenuItem.Checked ? "true" : "false");
         }
 
+        public void SetConfigValue(string key, string value)
+        {
+            Config.AppSettings.Settings.Remove(key);
+            Config.AppSettings.Settings.Add(key, value);
+        }
+
         public void WriteConfigValue(string key, string value)
         {
             Config.AppSettings.Settings.Remove(key);
@@ -1075,7 +1131,7 @@ namespace HPLStudio
             Config.Save(ConfigurationSaveMode.Minimal);
         }
 
-        private void инструментыПрограмматораToolStripMenuItem_Click(object sender, EventArgs e)
+        private void programmerSoftwareToolStripMenuItem_Click(object sender, EventArgs e)
         {
             OpenFile(Application.StartupPath + "/config.ini");
         }
