@@ -172,11 +172,11 @@ SCL=0
 [READ]
 start
 R0=0x0A, R1=0xA1
-out8bit_wack(R0),SDA=0
-out8bit_wack(ADR),SDA=0
+out8bit_w_ack(R0),SDA=0
+out8bit_w_ack(ADR),SDA=0
 
 start
-out8bit_wack(R1),SDA=1
+out8bit_w_ack(R1),SDA=1
 LOOP=(7,0){SCL=1,DATA[I]=SDA,SCL=0}  ;read byte
 SDA=1,SCL=1,SCL=0,SDA=0              ;master not asked
 stop
